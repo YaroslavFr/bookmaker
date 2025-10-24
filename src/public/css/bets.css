@@ -2,13 +2,32 @@
 body{
   margin: 0;
 }
-header{
-  background: black;
-  padding: 15px 0;
+/* Animatable CSS variable for header hue */
+@property --mid-h {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 210;
 }
+
+@keyframes headerHueShift {
+  0% { --mid-h: 0; }
+  100% { --mid-h: 360; }
+}
+
+/* Header gradient styling */
+header {
+  --mid-h: 210;
+  background: linear-gradient(135deg, #000000 0%, hsl(var(--mid-h), 90%, 58%) 70%, #991e1e 100%);
+  color: #ffffff;
+  animation: headerHueShift 12s linear infinite;
+}
+header .container { padding: 16px 0; }
+header .logo { color: #ffffff; }
+header .description { color: rgba(255, 255, 255, 0.82); }
+header a { color: #ffffff; }
 body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
 .container{
-  margin:20px;
+  margin:0 20px;
 }
 .grid { display: grid; grid-template-columns: 70% 30%; gap: 20px; }
 .card { border: 1px solid #ddd; border-radius: 8px; padding: 16px; }
