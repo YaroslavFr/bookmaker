@@ -6,3 +6,4 @@ use App\Http\Controllers\BetController;
 Route::get('/', [BetController::class, 'index'])->name('home');
 Route::post('/bets', [BetController::class, 'store'])->name('bets.store');
 Route::post('/events/{event}/settle', [BetController::class, 'settle'])->name('events.settle');
+Route::get('/events/sync-results', [BetController::class, 'syncResults'])->name('events.sync');

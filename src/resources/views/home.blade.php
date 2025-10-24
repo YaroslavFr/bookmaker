@@ -26,7 +26,10 @@
     <div class="container">
         <div class="grid">
             <div class="card">
-                <h2>События АПЛ</h2>
+                <div class="row row-between">
+                    <h2>События АПЛ</h2>
+                    <a href="{{ route('events.sync') }}" class="btn btn-primary">Синхронизировать результаты</a>
+                </div>
                 <table class="responsive-table">
                     <thead>
                         <tr>
@@ -73,15 +76,15 @@
                 <h2>Сделать демо-ставку</h2>
                 <form method="POST" action="{{ route('bets.store') }}" id="bet-form">
                     @csrf
-                    <div class="row row-start">
+                    <div class="row row-start mb-20">
                         <label for="bettor_name" class="form-label">Имя игрока</label>
                         <input type="text" id="bettor_name" placeholder="Например: Иван" />
                     </div>
-                    <div class="row row-start">
+                    <div class="row row-start mb-20">
                         <label for="amount_demo" class="form-label">Сумма (демо)</label>
                         <input type="number" id="amount_demo" placeholder="Например: 100" />
                     </div>
-                    <div class="row row-start">
+                    <div class="row row-start mb-20">
                         <div class="form-label">Купон</div>
                         <ul id="slip-list"></ul>
                         <div id="slip-empty" class="muted">Добавьте исходы, кликая по коэффициентам в таблице</div>
