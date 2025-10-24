@@ -4,45 +4,16 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Демо-ставки</title>
-    <style>
-        body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 20px; }
-        .grid { display: grid; grid-template-columns: 70% 30%; gap: 20px; }
-        .card { border: 1px solid #ddd; border-radius: 8px; padding: 16px; }
-        h2 { margin-top: 0; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { border-bottom: 1px solid #eee; padding: 8px; text-align: left; }
-        .status { font-size: 12px; color: #666; }
-        .row { display: flex; gap: 8px; align-items: center; }
-        .btn { padding: 8px 12px; border: 1px solid #444; background: #fff; border-radius: 6px; cursor: pointer; }
-        .btn-primary { background: #2563eb; color: #fff; border-color: #2563eb; }
-        .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
-        .badge-scheduled { background: #e0f2fe; color: #0369a1; }
-        .badge-live { background: #fef3c7; color: #92400e; }
-        .badge-finished { background: #dcfce7; color: #166534; }
-        .muted { color:#666; font-size:12px }
-        /* Responsive table */
-        .responsive-table { width: 100%; }
-        .odd-btn { display:inline-block; padding: 2px 6px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; }
-        .odd-btn:hover { background: #f3f4f6; }
-        .sep { color:#999; margin: 0 4px; }
-        @media (max-width: 640px) {
-            .grid { grid-template-columns: 1fr; }
-            .responsive-table thead { display: none; }
-            .responsive-table tr { display: block; border: 1px solid #eee; border-radius: 8px; padding: 10px; margin-bottom: 12px; }
-            .responsive-table td { display: flex; justify-content: space-between; align-items: flex-start; border: none; padding: 6px 0; }
-            .responsive-table td::before { content: attr(data-label); font-size: 12px; color: #666; margin-right: 8px; }
-            .row { flex-direction: column; align-items: flex-start; }
-            .odd-btn { padding: 6px 8px; }
-        }
-    </style>
+    <link rel="stylesheet" href="{{ asset('css/bets.css') }}">
 </head>
 <body>
-    <div class="logo">SPORT-KUCKOLD</div>
-
-    <div class="description">Платформа демо-ставок на спорт</div>
+    <header>
+        <div class="logo">SPORT-Cuckold</div>
+        <div class="description">Платформа демо-ставок на спорт, для тех кто любит смотреть спорт</div>
+    </header>
 
     @if(session('status'))
-        <p class="badge" style="background:#dbeafe;color:#1e40af">{{ session('status') }}</p>
+        <p class="badge badge-info">{{ session('status') }}</p>
     @endif
 
     <h1>Все события</h1>
@@ -95,20 +66,18 @@
             <h2>Сделать демо-ставку</h2>
             <form method="POST" action="{{ route('bets.store') }}" id="bet-form">
                 @csrf
-                <div class="row">
-                    <label for="bettor_name" style="width:160px">Имя игрока</label>
-                    <input type="text" id="bettor_name" name="bettor_name" required />
+                <div class="row row-start">
+                    <label for="bettor_name" class="form-label">Имя игрока</label>
+                    <input type="text" id="bettor_name" placeholder="Например: Иван" />
                 </div>
-                <div class="row">
-                    <label for="amount_demo" style="width:160px">Сумма (демо)</label>
-                    <input type="number" step="0.01" id="amount_demo" name="amount_demo" required />
+                <div class="row row-start">
+                    <label for="amount_demo" class="form-label">Сумма (демо)</label>
+                    <input type="number" id="amount_demo" placeholder="Например: 100" />
                 </div>
-                <div class="row" style="align-items:flex-start">
-                    <div style="width:160px">Купон</div>
-                    <div style="flex:1">
-                        <ul id="slip-list" style="list-style:none; padding:0; margin:0"></ul>
-                        <div id="slip-empty" class="muted">Добавьте исходы, кликая по коэффициентам в таблице</div>
-                    </div>
+                <div class="row row-start">
+                    <div class="form-label">Купон</div>
+                    <ul id="slip-list"></ul>
+                    <div id="slip-empty" class="muted">Добавьте исходы, кликая по коэффициентам в таблице</div>
                 </div>
                 <div class="row">
                     <button class="btn" type="button" id="clear-slip">Очистить купон</button>
@@ -118,7 +87,7 @@
         </div>
     </div>
 
-    <div class="card" style="margin-top:20px">
+    <div class="card mt-20">
         <h2>Последние ставки</h2>
         <table>
             <thead>
@@ -187,11 +156,10 @@
                 clearSlipBtn.disabled = false;
                 items.forEach(item => {
                     const li = document.createElement('li');
-                    li.style.padding = '6px 0';
-                    li.style.borderBottom = '1px solid #eee';
+                    li.className = 'slip-item';
                     const title = (item.home && item.away) ? `${item.home} vs ${item.away}` : `Event #${item.eventId}`;
                     li.innerHTML = `
-                        <div class="row" style="justify-content:space-between">
+                        <div class="row row-between">
                             <div>
                                 <strong>${title}</strong>
                                 <div class="muted">Исход: ${selectionLabel(item.selection, item.home, item.away)} • кэф ${item.odds}</div>
@@ -201,7 +169,6 @@
                     `;
                     slipList.appendChild(li);
                 });
-                // remove handlers
                 slipList.querySelectorAll('[data-remove]').forEach(btn => {
                     btn.addEventListener('click', () => {
                         const id = btn.getAttribute('data-remove');
