@@ -54,7 +54,7 @@ th, td { border-bottom: 1px solid #eee; padding: 8px; text-align: left; }
 .sep { color:#999; margin: 0 4px; }
 
 /* Form helpers */
-.form-label { width: 160px; }
+.form-label { width: 110px; }
 .row-start { align-items: flex-start; }
 .row-between { justify-content: space-between; }
 .mt-20 { margin-top: 20px; }
