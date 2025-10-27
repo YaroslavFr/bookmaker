@@ -22,14 +22,17 @@
     @endif
     <main>
         <div class="container">
-            <h1>Все события</h1>
+            <h1 class="mb-10">Все события</h1>
         </div>
         <div class="container">
             <div class="grid">
                 <div class="card all-events">
                     <div class="row row-between">
                         <h2>События АПЛ</h2>
-                        <a href="{{ route('events.sync') }}" class="btn btn-primary">Синхронизировать результаты</a>
+                        <div class="row" style="gap:8px;">
+                            <a href="{{ route('events.sync') }}" class="btn btn-primary">Синхронизировать результаты</a>
+                            <a href="{{ route('events.debug') }}" class="btn btn-secondary">Отладка результатов</a>
+                        </div>
                     </div>
                     <table class="responsive-table">
                         <thead>
@@ -42,7 +45,10 @@
                         </thead>
                         <tbody>
                             @foreach($events as $event)
-                                @php $status = $event->status; @endphp
+                                @php 
+                                    $status = $event->status; 
+                                    $canBet = $event->starts_at && $event->starts_at->isFuture() && $event->status === 'scheduled';
+                                @endphp
                                 <tr>
                                     <td data-label="Матч">
                                         @if($event->home_team && $event->away_team)
@@ -56,7 +62,7 @@
                                         <span class="badge badge-{{ $status }}">{{ $status }}</span>
                                     </td>
                                     <td data-label="Коэфф. (Д/Н/Г)">
-                                        @if($event->home_odds)
+                                        @if($canBet && $event->home_odds)
                                             <span class="odd-btn" data-event-id="{{ $event->id }}" data-selection="home" data-home="{{ $event->home_team }}" data-away="{{ $event->away_team }}" data-odds="{{ number_format($event->home_odds, 2) }}">{{ number_format($event->home_odds, 2) }}</span>
                                             <span class="sep">/</span>
                                             <span class="odd-btn" data-event-id="{{ $event->id }}" data-selection="draw" data-home="{{ $event->home_team }}" data-away="{{ $event->away_team }}" data-odds="{{ number_format($event->draw_odds, 2) }}">{{ number_format($event->draw_odds, 2) }}</span>
@@ -79,33 +85,56 @@
             </div>
 
             <div class="card mt-20">
-                <h2>Последние ставки</h2>
+                <h2>Последние ставки (купоны)</h2>
                 <table>
                     <thead>
                         <tr>
+                            <th>Купон ID</th>
                             <th>Игрок</th>
-                            <th>Событие</th>
+                            <th>События (экспресс)</th>
                             <th>Ставка</th>
-                            <th>Выигрыш</th>
-                            <th>Выплата</th>
-                            <th>Дата расчёта</th>
+                            <th>Итоговый кэф</th>
+                            <th>Потенц. выплата</th>
+                            <th>Статус</th>
+                            <th>Дата ставки</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach($bets as $bet)
+                        @foreach($coupons as $coupon)
+                            @php $isSingle = $coupon->bets->count() === 1; $leg = $isSingle ? $coupon->bets->first() : null; @endphp
                             <tr>
-                                <td>{{ $bet->bettor_name }}</td>
+                                <td>{{ $coupon->id }}</td>
+                                <td>{{ $coupon->bettor_name }}</td>
                                 <td>
-                                    @if($bet->event->home_team && $bet->event->away_team)
-                                        {{ $bet->event->home_team }} vs {{ $bet->event->away_team }}
+                                    @foreach($coupon->bets as $l)
+                                        @php $showDot = $isSingle && $l->settled_at !== null && $l->is_win !== null; @endphp
+                                        <div>
+                                            @if($showDot)
+                                                <span class="status-dot {{ $l->is_win ? 'status-dot--win' : 'status-dot--lose' }}" aria-hidden="true"></span>
+                                            @endif
+                                            @if($l->event->home_team && $l->event->away_team)
+                                                {{ $l->event->home_team }} vs {{ $l->event->away_team }}
+                                            @else
+                                                {{ $l->event->title }}
+                                            @endif
+                                            — выбор: {{ strtoupper($l->selection) }}
+                                        </div>
+                                    @endforeach
+                                </td>
+                                <td>{{ number_format($coupon->amount_demo, 2) }}</td>
+                                <td>{{ $coupon->total_odds ? number_format($coupon->total_odds, 2) : '—' }}</td>
+                                <td>
+                                    @php $potential = $coupon->total_odds ? ($coupon->amount_demo * $coupon->total_odds) : null; @endphp
+                                    {{ $potential ? number_format($potential, 2) : '—' }}
+                                </td>
+                                <td>
+                                    @if($isSingle)
+                                        {{ $leg && $leg->is_win === null ? '—' : ($leg && $leg->is_win ? 'Выиграно' : 'Проигрышь') }}
                                     @else
-                                        {{ $bet->event->title }}
+                                        {{ $coupon->is_win === null ? '—' : ($coupon->is_win ? 'Выиграно' : 'Проигрышь') }}
                                     @endif
                                 </td>
-                                <td>{{ number_format($bet->amount_demo, 2) }}</td>
-                                <td>{{ $bet->is_win === null ? '—' : ($bet->is_win ? 'Win' : 'Lose') }}</td>
-                                <td>{{ $bet->payout_demo ? number_format($bet->payout_demo, 2) : '—' }}</td>
-                                <td>{{ $bet->settled_at ? $bet->settled_at->format('Y-m-d H:i') : '—' }}</td>
+                                <td>{{ $coupon->created_at ? $coupon->created_at->format('Y-m-d H:i') : '—' }}</td>
                             </tr>
                         @endforeach
                     </tbody>

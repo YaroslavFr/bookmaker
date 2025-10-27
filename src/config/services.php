@@ -38,4 +38,11 @@ return [
     'odds_api' => [
         'key' => env('ODDS_API_KEY'),
     ],
+
+    'api_sport' => [
+        'key' => env('API_SPORT_KEY'),
+        // OpenAPI server: https://api.api-sport.ru ; paths start with /v1
+        'base_url' => env('API_SPORT_BASE', 'https://api.api-sport.ru'),
+    ],
+
 ];

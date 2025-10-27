@@ -53,6 +53,11 @@ th, td { border-bottom: 1px solid #eee; padding: 8px; text-align: left; }
 .odd-btn:hover { background: #f3f4f6; }
 .sep { color:#999; margin: 0 4px; }
 
+/* Status dots */
+.status-dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+.status-dot--win { background:#16a34a; }
+.status-dot--lose { background:#dc2626; }
+
 /* Form helpers */
 .form-label { width: 110px; }
 .row-start { align-items: flex-start; }

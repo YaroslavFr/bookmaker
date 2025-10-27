@@ -5,28 +5,24 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Bet extends Model
+class Coupon extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'event_id', 'bettor_name', 'amount_demo', 'selection', 'is_win', 'payout_demo', 'settled_at', 'coupon_id'
+        'bettor_name', 'amount_demo', 'total_odds', 'is_win', 'payout_demo', 'settled_at',
     ];
 
     protected $casts = [
         'amount_demo' => 'decimal:2',
+        'total_odds' => 'decimal:2',
         'payout_demo' => 'decimal:2',
         'settled_at' => 'datetime',
-        'is_win' => 'boolean'
+        'is_win' => 'boolean',
     ];
 
-    public function event()
+    public function bets()
     {
-        return $this->belongsTo(Event::class);
-    }
-
-    public function coupon()
-    {
-        return $this->belongsTo(Coupon::class);
+        return $this->hasMany(Bet::class);
     }
 }

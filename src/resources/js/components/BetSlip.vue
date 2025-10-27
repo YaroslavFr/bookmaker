@@ -2,9 +2,14 @@
   <div>
     <h2 class="font-bold mb-10">Сделать демо-ставку</h2>
     <form @submit.prevent="submitAll" class="bet-form">
+      <!-- Общая ошибка с плейсхолдером -->
+      <div class="general-error" :class="errors.general ? 'general-error--visible' : 'general-error--placeholder'">{{ errors.general || ' ' }}</div>
+      
       <div class="row row-start mb-4">
         <label for="bettor_name" class="form-label">Имя игрока</label>
-        <input type="text" id="bettor_name" placeholder="Например: Иван" v-model="bettorName" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <input type="text" id="bettor_name" placeholder="Например: Иван" v-model="bettorName"
+               :class="['border rounded-md px-3 py-2 focus:outline-none', errors.name ? 'border-red-500 focus:ring-2 focus:ring-red-500' : 'border-gray-300 focus:ring-2 focus:ring-blue-500']" />
+        <p class="form-hint" :class="{ 'form-hint--error': !!errors.name, 'form-hint--empty': !errors.name }">{{ errors.name || ' ' }}</p>
       </div>
       
       <div class="row row-start mb-4">
@@ -23,10 +28,13 @@
         <div id="slip-empty" class="muted" v-show="slip.length === 0">
           Добавьте исходы, кликая по коэффициентам в таблице
         </div>
+        <p class="form-hint" :class="{ 'form-hint--error': !!errors.slip, 'form-hint--empty': !errors.slip }">{{ errors.slip || ' ' }}</p>
       </div>
       <div class="row row-start mb-4">
         <label for="amount_demo" class="form-label">Сумма (демо)</label>
-        <input type="number" id="amount_demo" placeholder="Например: 100" v-model.number="amountDemo" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <input type="number" id="amount_demo" placeholder="Например: 100" v-model.number="amountDemo"
+               :class="['border rounded-md px-3 py-2 focus:outline-none', errors.amount ? 'border-red-500 focus:ring-2 focus:ring-red-500' : 'border-gray-300 focus:ring-2 focus:ring-blue-500']" />
+        <p class="form-hint" :class="{ 'form-hint--error': !!errors.amount, 'form-hint--empty': !errors.amount }">{{ errors.amount || ' ' }}</p>
       </div>
       <div class="row">
         <button class="btn" type="button" @click="clearSlip" :disabled="slip.length === 0">Очистить</button>
@@ -43,6 +51,7 @@ const bettorName = ref('')
 const amountDemo = ref(null)
 const slip = ref([]) // [{ eventId, home, away, selection, odds }]
 const submitting = ref(false)
+const errors = ref({ name: null, amount: null, slip: null, general: null })
 
 const selectionLabel = (sel, home, away) => {
   if (sel === 'home') return home || 'home'
@@ -64,8 +73,31 @@ function clearSlip() {
   slip.value = []
 }
 
+function clearErrors() {
+  errors.value = { name: null, amount: null, slip: null, general: null }
+}
+
+function validateForm() {
+  clearErrors()
+  let ok = true
+  if (!bettorName.value || bettorName.value.trim().length === 0) {
+    errors.value.name = 'Вы не заполнили имя игрока'
+    ok = false
+  }
+  if (!amountDemo.value || Number(amountDemo.value) <= 0) {
+    errors.value.amount = 'Введите сумму ставки'
+    ok = false
+  }
+  if (slip.value.length === 0) {
+    errors.value.slip = 'Вы не выбрали ни одного исхода'
+    ok = false
+  }
+  return ok
+}
+
 const disableSubmit = computed(() => {
-  return submitting.value || slip.value.length === 0 || !bettorName.value || !amountDemo.value
+  // Блокируем кнопку только во время отправки, чтобы показать ошибки при клике
+  return submitting.value
 })
 
 function handleOddClick(e) {
@@ -80,37 +112,45 @@ function handleOddClick(e) {
 }
 
 async function submitAll() {
-  if (disableSubmit.value) return
+  if (submitting.value) return
+  // Клиентская валидация
+  if (!validateForm()) {
+    return
+  }
   submitting.value = true
   try {
     const rootEl = document.getElementById('vue-app')
     const csrfToken = rootEl?.dataset?.csrf || ''
     const postUrl = rootEl?.dataset?.postUrl || ''
-    for (const item of slip.value) {
-      const body = new URLSearchParams()
-      body.append('bettor_name', bettorName.value)
-      body.append('amount_demo', String(amountDemo.value))
-      body.append('event_id', String(item.eventId))
-      body.append('selection', item.selection)
-      body.append('_token', csrfToken)
-      const res = await fetch(postUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'X-CSRF-TOKEN': csrfToken,
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-        body,
-      })
-      if (!res.ok) {
-        const text = await res.text()
-        throw new Error('Ошибка ставки: ' + text)
-      }
+
+    const items = slip.value.map(i => ({ event_id: Number(i.eventId), selection: i.selection }))
+    const payload = {
+      bettor_name: bettorName.value,
+      amount_demo: Number(amountDemo.value),
+      items,
     }
+
+    const res = await fetch(postUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': csrfToken,
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: JSON.stringify(payload),
+    })
+
+    if (!res.ok) {
+      const text = await res.text()
+      errors.value.general = 'Ошибка ставки: ' + text
+      return
+    }
+
     clearSlip()
+    clearErrors()
     location.reload()
   } catch (e) {
-    alert(e.message)
+    errors.value.general = e.message
   } finally {
     submitting.value = false
   }
@@ -127,4 +167,36 @@ onBeforeUnmount(() => {
 
 <style scoped>
 /* Дополнительные стили компонента при необходимости */
+.general-error {
+  min-height: 40px;
+  margin-bottom: 1rem;
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+}
+.general-error--placeholder {
+  visibility: hidden;
+}
+.general-error--visible {
+  visibility: visible;
+  background-color: #fef2f2; /* red-50 */
+  border: 1px solid #fecaca; /* red-200 */
+  color: #b91c1c; /* red-700 */
+}
+
+/* Резервируем отступ под сообщение ошибки именно под блоком slip-empty */
+#slip-empty {
+  margin-bottom: 1.25rem; /* совпадает с высотой сообщения об ошибке */
+}
+
+.form-hint {
+  min-height: 0; /* хинт сам не резервирует место, оно у slip-empty */
+  font-size: 0.875rem; /* text-sm */
+  margin-top: 0; /* чтобы не добавлять лишний сдвиг */
+}
+.form-hint--empty {
+  display: none; /* скрываем хинт полностью, не влияя на раскладку */
+}
+.form-hint--error {
+  color: #dc2626; /* text-red-600 */
+}
 </style>
