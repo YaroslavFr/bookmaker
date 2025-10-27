@@ -14,8 +14,11 @@ class BetController extends Controller
 {
     public function index()
     {
-
-        $events = Event::with('bets')->latest()->get();
+        // Use explicit ordering by starts_at to avoid relying on created_at
+        $events = Event::with('bets')
+            ->orderByDesc('starts_at')
+            ->orderByDesc('id')
+            ->get();
         $coupons = Coupon::with(['bets.event'])->latest()->limit(50)->get();
 
         return view('home', compact('events', 'coupons'));
@@ -583,6 +586,54 @@ class BetController extends Controller
                 ]);
             }
 
+            // Try to link upcoming fixtures to existing Event records to enable betting from debug page
+            $eventsUpcoming = Event::where('status', 'scheduled')->get();
+            $eventIndex = [];
+            foreach ($eventsUpcoming as $ev) {
+                $homeKey = is_string($ev->home_team) ? mb_strtolower(trim($ev->home_team)) : '';
+                $awayKey = is_string($ev->away_team) ? mb_strtolower(trim($ev->away_team)) : '';
+                $dateKey = $ev->starts_at ? $ev->starts_at->toDateString() : '';
+                if ($homeKey && $awayKey && $dateKey) {
+                    $eventIndex[$homeKey.'|'.$awayKey.'|'.$dateKey] = $ev->id;
+                }
+            }
+            foreach ($fixturesWeekWithOdds as &$m) {
+                try {
+                    $homeKey = is_string($m['home_team'] ?? null) ? mb_strtolower(trim($m['home_team'])) : '';
+                    $awayKey = is_string($m['away_team'] ?? null) ? mb_strtolower(trim($m['away_team'])) : '';
+                    $dateKey = isset($m['commence_time']) && $m['commence_time'] ? Carbon::parse($m['commence_time'])->toDateString() : '';
+                    $idxKey = $homeKey.'|'.$awayKey.'|'.$dateKey;
+                    if ($homeKey && $awayKey && $dateKey && isset($eventIndex[$idxKey])) {
+                        $m['event_id'] = $eventIndex[$idxKey];
+                    } else {
+                        // If no existing Event found, upsert a new scheduled event for betting
+                        $homeName = $m['home_team'] ?? null;
+                        $awayName = $m['away_team'] ?? null;
+                        $startsAt = isset($m['commence_time']) && $m['commence_time'] ? Carbon::parse($m['commence_time']) : null;
+                        if ($homeName && $awayName && $startsAt) {
+                            $existing = Event::where('home_team', $homeName)
+                                ->where('away_team', $awayName)
+                                ->whereDate('starts_at', $startsAt->toDateString())
+                                ->first();
+                            if (!$existing) {
+                                $existing = Event::create([
+                                    'title' => $homeName.' vs '.$awayName,
+                                    'home_team' => $homeName,
+                                    'away_team' => $awayName,
+                                    'starts_at' => $startsAt,
+                                    'status' => 'scheduled',
+                                    'home_odds' => $m['home_odds'] ?? null,
+                                    'draw_odds' => $m['draw_odds'] ?? null,
+                                    'away_odds' => $m['away_odds'] ?? null,
+                                ]);
+                            }
+                            $m['event_id'] = $existing->id;
+                        }
+                    }
+                } catch (\Throwable $e) {}
+            }
+            unset($m);
+
             $aggregates = [
                 'most_scoring_overall' => $mostScoringOverall,
                 'most_scoring_home' => $mostScoringHome,
@@ -592,6 +643,9 @@ class BetController extends Controller
                 'team_stats' => $teamStats,
             ];
 
+            // Load latest coupons (bet history)
+            $coupons = Coupon::with(['bets.event'])->latest()->limit(50)->get();
+
             return view('debug-results', [
                 'error' => null,
                 'apiSportFixturesWeek' => $fixturesWeekWithOdds,
@@ -599,6 +653,7 @@ class BetController extends Controller
                 'apiSportResultsAll' => $resultsAll,
                 'apiSportTournamentRaw' => $tournamentRaw,
                 'apiSportAggregates' => $aggregates,
+                'coupons' => $coupons,
             ]);
         } catch (\Throwable $e) {
             return view('debug-results', [

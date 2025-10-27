@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Отладка результатов АПЛ</title>
     <link rel="stylesheet" href="{{ asset('css/bets.css') }}">
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     
     <style>
         .muted { color: #6b7280; font-size: 12px; }
@@ -73,8 +74,17 @@
                                         @php($h = $m['home_odds'] ?? null)
                                         @php($d = $m['draw_odds'] ?? null)
                                         @php($a = $m['away_odds'] ?? null)
+                                        @php($eid = $m['event_id'] ?? null)
                                         @if($h && $d && $a)
-                                            {{ number_format($h, 2) }} / {{ number_format($d, 2) }} / {{ number_format($a, 2) }}
+                                            @if($eid)
+                                                <span class="odd-btn" data-event-id="{{ $eid }}" data-selection="home" data-home="{{ $m['home_team'] ?? '' }}" data-away="{{ $m['away_team'] ?? '' }}" data-odds="{{ number_format($h, 2) }}">{{ number_format($h, 2) }}</span>
+                                                <span class="sep">/</span>
+                                                <span class="odd-btn" data-event-id="{{ $eid }}" data-selection="draw" data-home="{{ $m['home_team'] ?? '' }}" data-away="{{ $m['away_team'] ?? '' }}" data-odds="{{ number_format($d, 2) }}">{{ number_format($d, 2) }}</span>
+                                                <span class="sep">/</span>
+                                                <span class="odd-btn" data-event-id="{{ $eid }}" data-selection="away" data-home="{{ $m['home_team'] ?? '' }}" data-away="{{ $m['away_team'] ?? '' }}" data-odds="{{ number_format($a, 2) }}">{{ number_format($a, 2) }}</span>
+                                            @else
+                                                {{ number_format($h, 2) }} / {{ number_format($d, 2) }} / {{ number_format($a, 2) }}
+                                            @endif
                                         @else
                                             —
                                         @endif
@@ -83,6 +93,59 @@
                             @endforeach
                         </tbody>
                     </table>
+                @endif
+            </div>
+
+            <div class="card mt-20">
+                <div id="vue-app" data-csrf="{{ csrf_token() }}" data-post-url="{{ route('bets.store') }}"></div>
+            </div>
+
+            @php($coupons = $coupons ?? [])
+            <div class="card mt-20">
+                <h2>Последние ставки (купоны)</h2>
+                @if(empty($coupons))
+                    <p class="muted">История ставок пуста.</p>
+                @else
+                <table class="responsive-table">
+                    <thead>
+                        <tr>
+                            <th>Купон ID</th>
+                            <th>Игрок</th>
+                            <th>События (экспресс)</th>
+                            <th>Сумма</th>
+                            <th>Итоговый кэф</th>
+                            <th>Потенц. выплата</th>
+                            <th>Статус</th>
+                            <th>Дата ставки</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($coupons as $coupon)
+                            <tr>
+                                <td>{{ $coupon->id }}</td>
+                                <td>{{ $coupon->bettor_name }}</td>
+                                <td>
+                                    @foreach($coupon->bets as $l)
+                                        <div>
+                                            @if($l->event && $l->event->home_team && $l->event->away_team)
+                                                {{ $l->event->home_team }} vs {{ $l->event->away_team }}
+                                            @else
+                                                {{ $l->event->title ?? ('Event #'.$l->event_id) }}
+                                            @endif
+                                            — выбор: {{ strtoupper($l->selection) }}
+                                        </div>
+                                    @endforeach
+                                </td>
+                                <td>{{ $coupon->amount_demo ? number_format($coupon->amount_demo, 2) : '—' }}</td>
+                                <td>{{ $coupon->total_odds ? number_format($coupon->total_odds, 2) : '—' }}</td>
+                                @php($potential = ($coupon->total_odds && $coupon->amount_demo) ? ($coupon->amount_demo * $coupon->total_odds) : null)
+                                <td>{{ $potential ? number_format($potential, 2) : '—' }}</td>
+                                <td>{{ $coupon->is_win === null ? '—' : ($coupon->is_win ? 'Выиграно' : 'Проигрыш') }}</td>
+                                <td>{{ $coupon->created_at ? $coupon->created_at->format('Y-m-d H:i') : '—' }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
                 @endif
             </div>
 

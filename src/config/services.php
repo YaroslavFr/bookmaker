@@ -45,4 +45,9 @@ return [
         'base_url' => env('API_SPORT_BASE', 'https://api.api-sport.ru'),
     ],
 
+    'sstats' => [
+        'base_url' => env('SSTATS_BASE', 'https://api.sstats.net'),
+        'key' => env('SSTATS_API_KEY'),
+    ],
+
 ];
