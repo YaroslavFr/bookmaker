@@ -22,12 +22,13 @@
         <div class="container">
             <div class="logo">SPORT-KUCKOLD</div>
             <div class="description">Страница статистики: забиваемость, пропускаемость, победы</div>
+            @include('partials.nav')
         </div>
     </header>
     <main>
         <div class="container">
             <div class="row">
-                <h1>Статистика</h1>
+                <h1 class="text-2xl font-bold mt-6 mb-6">Статистика</h1>
             </div>
 
             @if(!empty($error))

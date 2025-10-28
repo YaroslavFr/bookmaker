@@ -22,6 +22,7 @@
         <div class="container">
             <div class="logo">SPORT-KUCKOLD</div>
             <div class="description">Для тех кто любит смотреть спорт</div>
+            @include('partials.nav')
         </div>
     </header>
     <main>
