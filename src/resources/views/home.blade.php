@@ -42,7 +42,7 @@
                             <tr>
                                 <th>Матч</th>
                                 <th>Дата/время</th>
-                                <th>Коэфф. (Д/Н/Г)</th>
+                                <th>Коэфф. (П1 / Ничья / П2)</th>
                                 <th>Статус</th>
                             </tr>
                         </thead>
@@ -65,11 +65,11 @@
                                         @php($a = $ev->away_odds)
                                         @if($h && $d && $a)
                                             @if(($ev->status ?? 'scheduled') === 'scheduled')
-                                                <span class="odd-btn" data-event-id="{{ $ev->id }}" data-selection="home" data-home="{{ $ev->home_team ?? '' }}" data-away="{{ $ev->away_team ?? '' }}" data-odds="{{ number_format($h, 2) }}">{{ number_format($h, 2) }}</span>
-                                                <span class="sep">/</span>
-                                                <span class="odd-btn" data-event-id="{{ $ev->id }}" data-selection="draw" data-home="{{ $ev->home_team ?? '' }}" data-away="{{ $ev->away_team ?? '' }}" data-odds="{{ number_format($d, 2) }}">{{ number_format($d, 2) }}</span>
-                                                <span class="sep">/</span>
-                                                <span class="odd-btn" data-event-id="{{ $ev->id }}" data-selection="away" data-home="{{ $ev->home_team ?? '' }}" data-away="{{ $ev->away_team ?? '' }}" data-odds="{{ number_format($a, 2) }}">{{ number_format($a, 2) }}</span>
+                                                <div class="odd-group">
+                                                    <span class="odd-btn odd-btn--home" data-event-id="{{ $ev->id }}" data-selection="home" data-home="{{ $ev->home_team ?? '' }}" data-away="{{ $ev->away_team ?? '' }}" data-odds="{{ number_format($h, 2) }}">П1 {{ number_format($h, 2) }}</span>
+                                                    <span class="odd-btn odd-btn--draw" data-event-id="{{ $ev->id }}" data-selection="draw" data-home="{{ $ev->home_team ?? '' }}" data-away="{{ $ev->away_team ?? '' }}" data-odds="{{ number_format($d, 2) }}">Ничья {{ number_format($d, 2) }}</span>
+                                                    <span class="odd-btn odd-btn--away" data-event-id="{{ $ev->id }}" data-selection="away" data-home="{{ $ev->home_team ?? '' }}" data-away="{{ $ev->away_team ?? '' }}" data-odds="{{ number_format($a, 2) }}">П2 {{ number_format($a, 2) }}</span>
+                                                </div>
                                             @else
                                                 {{ number_format($h, 2) }} / {{ number_format($d, 2) }} / {{ number_format($a, 2) }}
                                             @endif
@@ -121,7 +121,8 @@
                                             @else
                                                 {{ $l->event->title ?? ('Event #'.$l->event_id) }}
                                             @endif
-                                            — выбор: {{ strtoupper($l->selection) }}
+                                            @php($selMap = ['home' => 'П1', 'draw' => 'Ничья', 'away' => 'П2'])
+                                            — выбор: {{ $selMap[$l->selection] ?? strtoupper($l->selection) }}
                                         </div>
                                     @endforeach
                                 </td>

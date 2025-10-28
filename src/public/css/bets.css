@@ -54,6 +54,25 @@ th, td { border-bottom: 1px solid #eee; padding: 8px; text-align: left; }
 .odd-btn:hover { background: #f3f4f6; }
 .sep { color:#999; margin: 0 4px; }
 
+/* Improved odds layout */
+.odd-group { display: inline-flex; gap: 8px; align-items: center; }
+.odd-btn { padding: 6px 10px; font-weight: 600; border-radius: 9999px; border-color: transparent; }
+.odd-btn--home { background: #e0f2fe; color: #075985; }
+.odd-btn--draw { background: #f3f4f6; color: #111827; }
+.odd-btn--away { background: #fee2e2; color: #7f1d1d; }
+.odd-btn:hover { filter: brightness(0.95); }
+
+/* Table header polish */
+table thead th { background: #f8fafc; font-size: 12px; text-transform: uppercase; letter-spacing: 0.02em; color: #64748b; }
+table tbody tr:hover { background: #f9fafb; }
+
+/* Card title spacing */
+.card h2 { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+
+/* Nav tweaks */
+nav a { text-underline-offset: 3px; }
+nav a[aria-current="page"] { text-decoration: underline; }
+
 /* Status dots */
 .status-dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:middle; }
 .status-dot--win { background:#16a34a; }

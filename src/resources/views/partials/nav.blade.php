@@ -10,5 +10,10 @@
                class="text-blue-600 hover:underline {{ request()->is('stats') || request()->is('stats/*') ? 'font-semibold' : '' }}"
                aria-current="{{ request()->is('stats') || request()->is('stats/*') ? 'page' : '' }}">Статистика</a>
         </li>
+        <li>
+            <a href="{{ url('/docs') }}"
+               class="text-blue-600 hover:underline {{ request()->is('docs') ? 'font-semibold' : '' }}"
+               aria-current="{{ request()->is('docs') ? 'page' : '' }}">Документация</a>
+        </li>
     </ul>
 </nav>
