@@ -27,10 +27,11 @@
     <main>
         <div class="container">
             <div class="row">
-                <h1>Линия событий</h1>
+                <h1 class="text-2xl font-bold mt-6 mb-6">Линия событий</h1>
             </div>
+            <div id="mainrow" class="grid grid-cols-1 md:grid-cols-[7fr_3fr] gap-4">
             <div class="card mt-20">
-                <h2>События</h2>
+                <h2 class="font-bold">События</h2>
                 @php($events = $events ?? [])
                 @if(empty($events))
                     <p class="muted">Нет событий.</p>
@@ -49,9 +50,9 @@
                                 <tr>
                                     <td data-label="Матч">
                                         @if(!empty($ev->home_team) && !empty($ev->away_team))
-                                            {{ $ev->home_team }} vs {{ $ev->away_team }}
+                                            <span class="teams-title">{{ $ev->home_team }} vs {{ $ev->away_team }}</span>
                                         @else
-                                            {{ $ev->title ?? ('Event #'.$ev->id) }}
+                                            <b>{{ $ev->title ?? ('Event #'.$ev->id) }}</b>
                                         @endif
                                     </td>
                                     <td data-label="Дата/время">
@@ -86,7 +87,7 @@
             <div class="card mt-20">
                 <div id="vue-app" data-csrf="{{ csrf_token() }}" data-post-url="{{ route('bets.store') }}"></div>
             </div>
-
+            </div>
             @php($coupons = $coupons ?? [])
             <div class="card mt-20">
                 <h2>Последние ставки (купоны)</h2>

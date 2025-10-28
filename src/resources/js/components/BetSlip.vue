@@ -1,27 +1,32 @@
 <template>
   <div>
-    <h2 class="font-bold mb-10">Сделать демо-ставку</h2>
+    <h2 class="font-bold md:mb-8 mb-3">Сделать демо-ставку</h2>
     <form @submit.prevent="submitAll" class="bet-form">
       <!-- Общая ошибка с плейсхолдером -->
       <div class="general-error" :class="errors.general ? 'general-error--visible' : 'general-error--placeholder'">{{ errors.general || ' ' }}</div>
       
-      <div class="row row-start mb-4">
+      <div class="row row-start">
         <label for="bettor_name" class="form-label">Имя игрока</label>
-        <input type="text" id="bettor_name" placeholder="Например: Иван" v-model="bettorName"
-               :class="['border rounded-md px-3 py-2 focus:outline-none', errors.name ? 'border-red-500 focus:ring-2 focus:ring-red-500' : 'border-gray-300 focus:ring-2 focus:ring-blue-500']" />
-        <p class="form-hint" :class="{ 'form-hint--error': !!errors.name, 'form-hint--empty': !errors.name }">{{ errors.name || ' ' }}</p>
+        <div>
+          <input type="text" id="bettor_name" placeholder="Например: Иван" v-model="bettorName"
+                :class="['border rounded-md px-3 py-2 focus:outline-none', errors.name ? 'border-red-500 focus:ring-2 focus:ring-red-500' : 'border-gray-300 focus:ring-2 focus:ring-blue-500']" />
+          <p class="form-hint" :class="{ 'form-hint--error': !!errors.name, 'form-hint--empty': !errors.name }">{{ errors.name || ' ' }}</p>
+        </div>
       </div>
       
-      <div class="row row-start mb-4">
+      <div class="row row-start">
         <div class="form-label">Купон</div>
+        <div>
         <ul id="slip-list">
           <li v-for="item in slip" :key="item.eventId" class="slip-item">
             <div class="row row-between">
+              <div>
               <div>
                 <strong>{{ item.home && item.away ? `${item.home} vs ${item.away}` : `Event #${item.eventId}` }}</strong>
                 <div class="muted">Исход: {{ selectionLabel(item.selection, item.home, item.away) }} • кэф {{ item.odds }}</div>
               </div>
               <button class="" type="button" @click="removeItem(item.eventId)">X</button>
+            </div>
             </div>
           </li>
         </ul>
@@ -29,16 +34,19 @@
           Добавьте исходы, кликая по коэффициентам в таблице
         </div>
         <p class="form-hint" :class="{ 'form-hint--error': !!errors.slip, 'form-hint--empty': !errors.slip }">{{ errors.slip || ' ' }}</p>
+        </div>
       </div>
-      <div class="row row-start mb-4">
+      <div class="row row-start">
         <label for="amount_demo" class="form-label">Сумма (демо)</label>
+        <div>
         <input type="number" id="amount_demo" placeholder="Например: 100" v-model.number="amountDemo"
                :class="['border rounded-md px-3 py-2 focus:outline-none', errors.amount ? 'border-red-500 focus:ring-2 focus:ring-red-500' : 'border-gray-300 focus:ring-2 focus:ring-blue-500']" />
         <p class="form-hint" :class="{ 'form-hint--error': !!errors.amount, 'form-hint--empty': !errors.amount }">{{ errors.amount || ' ' }}</p>
       </div>
-      <div class="row">
-        <button class="btn" type="button" @click="clearSlip" :disabled="slip.length === 0">Очистить</button>
+      </div>
+      <div class="row mt-6">
         <button class="btn btn-primary" type="button" @click="submitAll" :disabled="disableSubmit">Поставить</button>
+        <button class="btn" type="button" @click="clearSlip" :disabled="slip.length === 0">Очистить</button>
       </div>
     </form>
   </div>
@@ -167,11 +175,10 @@ onBeforeUnmount(() => {
 
 <style scoped>
 /* Дополнительные стили компонента при необходимости */
-.general-error {
-  min-height: 40px;
-  margin-bottom: 1rem;
+.form-hint {
+  min-height: 30px;
   border-radius: 0.375rem;
-  padding: 0.5rem 0.75rem;
+  padding: 0.3rem 0;
 }
 .general-error--placeholder {
   visibility: hidden;
@@ -189,12 +196,12 @@ onBeforeUnmount(() => {
 }
 
 .form-hint {
-  min-height: 0; /* хинт сам не резервирует место, оно у slip-empty */
   font-size: 0.875rem; /* text-sm */
   margin-top: 0; /* чтобы не добавлять лишний сдвиг */
 }
 .form-hint--empty {
-  display: none; /* скрываем хинт полностью, не влияя на раскладку */
+  visibility: hidden; /* скрываем хинт полностью, не влияя на раскладку */
+  opacity: 0;
 }
 .form-hint--error {
   color: #dc2626; /* text-red-600 */
