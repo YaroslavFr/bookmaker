@@ -31,7 +31,7 @@ class StatsController extends Controller
 
             // EPL tournament by default (17)
             $tournamentId = (int) env('API_SPORT_TOURNAMENT_ID', 17);
-            $tournamentResp = $http->get($base.'/v1/football/tournament/'.$tournamentId);
+            $tournamentResp = $http->get($base.'/v2/football/tournament/'.$tournamentId);
             $tournamentRaw = null; try { $tournamentRaw = $tournamentResp->json(); } catch (\Throwable $e) {}
             $categoryId = data_get($tournamentRaw, 'category.id');
             $seasonId = null;
@@ -61,7 +61,7 @@ class StatsController extends Controller
                     ];
                     if ($seasonId) { $params['season_id'] = $seasonId; }
                     if ($categoryId) { $params['category_id'] = $categoryId; }
-                    $resp = $http->get($base.'/v1/football/matches', $params);
+                    $resp = $http->get($base.'/v2/football/matches', $params);
                     $body = null; try { $body = $resp->json(); } catch (\Throwable $e) {}
                     $matches = is_array($body) ? ($body['matches'] ?? []) : [];
                     foreach ($matches as $m) {

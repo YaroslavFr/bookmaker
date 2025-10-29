@@ -28,12 +28,20 @@ class BetController extends Controller
     {
         // Expect one coupon with many items (parlay)
         $data = $request->validate([
-            'bettor_name' => ['required', 'string', 'max:100'],
+            // Если пользователь авторизован, имя игрока не требуется — используем его логин (username)
+            'bettor_name' => [auth()->check() ? 'nullable' : 'required', 'string', 'max:100'],
             'amount_demo' => ['required', 'numeric', 'min:0.01'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.event_id' => ['required', 'exists:events,id'],
             'items.*.selection' => ['required', 'in:home,draw,away'],
         ]);
+
+        // Определяем имя игрока: для авторизованного — username, иначе — из формы
+        $bettorName = $data['bettor_name'] ?? null;
+        if (auth()->check()) {
+            $user = auth()->user();
+            $bettorName = trim((string) ($user->username ?? $user->email ?? '')) ?: 'User';
+        }
 
         // Calculate total odds by multiplying selected odds of each event
         $totalOdds = 1.0;
@@ -49,7 +57,7 @@ class BetController extends Controller
         }
 
         $coupon = Coupon::create([
-            'bettor_name' => $data['bettor_name'],
+            'bettor_name' => $bettorName,
             'amount_demo' => $data['amount_demo'],
             'total_odds' => $totalOdds,
         ]);
@@ -58,7 +66,7 @@ class BetController extends Controller
         foreach ($data['items'] as $item) {
             Bet::create([
                 'event_id' => $item['event_id'],
-                'bettor_name' => $data['bettor_name'],
+                'bettor_name' => $bettorName,
                 'amount_demo' => $data['amount_demo'],
                 'selection' => $item['selection'],
                 'coupon_id' => $coupon->id,
@@ -125,7 +133,7 @@ class BetController extends Controller
     public function syncResults()
     {
         try {
-            $resp = Http::get('https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php', [
+            $resp = Http::get('https://www.thesportsdb.com/api/json/3/eventspastleague.php', [
                 'id' => 4328,
             ]);
             if ($resp->failed()) {
@@ -255,7 +263,7 @@ class BetController extends Controller
 
             // Direct tournament fetch by ID (default EPL: 17). Allows exact raw tournament output.
             $tournamentId = (int) env('API_SPORT_TOURNAMENT_ID', 17);
-            $tournamentResp = $http->get($base.'/v1/football/tournament/'.$tournamentId);
+            $tournamentResp = $http->get($base.'/v2football/tournament/'.$tournamentId);
             $tournamentRaw = null; try { $tournamentRaw = $tournamentResp->json(); } catch (\Throwable $e) {}
             $categoryId = data_get($tournamentRaw, 'category.id');
             // Try to detect current season id from tournament data
@@ -280,7 +288,7 @@ class BetController extends Controller
                     'tournament_id' => $tournamentId,
                 ];
                 if ($categoryId) { $params['category_id'] = $categoryId; }
-                $resp = $http->get($base.'/v1/football/matches', $params);
+                $resp = $http->get($base.'/v2/football/matches', $params);
                 $fixturesStatusLast = $resp->status();
                 $body = null; try { $body = $resp->json(); } catch (\Throwable $e) {}
                 $matches = is_array($body) ? ($body['matches'] ?? []) : [];
@@ -342,7 +350,7 @@ class BetController extends Controller
                     'tournament_id' => $tournamentId,
                 ];
                 if ($categoryId) { $params['category_id'] = $categoryId; }
-                $resp = $http->get($base.'/v1/football/matches', $params);
+                $resp = $http->get($base.'/v2/football/matches', $params);
                 $body = null; try { $body = $resp->json(); } catch (\Throwable $e) {}
                 $matches = is_array($body) ? ($body['matches'] ?? []) : [];
                 foreach ($matches as $m) {
@@ -411,7 +419,7 @@ class BetController extends Controller
                     ];
                     if ($seasonId) { $paramsAll['season_id'] = $seasonId; }
                     if ($categoryId) { $paramsAll['category_id'] = $categoryId; }
-                    $respAll = $http->get($base.'/v1/football/matches', $paramsAll);
+                    $respAll = $http->get($base.'/v2/football/matches', $paramsAll);
                     $bodyAll = null; try { $bodyAll = $respAll->json(); } catch (\Throwable $e) {}
                     $matchesAll = is_array($bodyAll) ? ($bodyAll['matches'] ?? []) : [];
                     foreach ($matchesAll as $m) {

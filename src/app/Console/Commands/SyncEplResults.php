@@ -17,7 +17,7 @@ class SyncEplResults extends Command
     {
         $this->info('Syncing EPL finished results...');
         try {
-            $resp = Http::get('https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php', [
+            $resp = Http::get('https://www.thesportsdb.com/api/json/3/eventspastleague.php', [
                 'id' => 4328,
             ]);
             if ($resp->failed()) {

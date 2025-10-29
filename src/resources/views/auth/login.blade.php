@@ -49,6 +49,9 @@
                         </label>
                         <button class="btn btn-primary" type="submit">Войти</button>
                     </div>
+                    <div class="row" style="margin-top:8px;">
+                        <a href="{{ route('password.request') }}" class="text-blue-600 hover:underline">Забыли пароль?</a>
+                    </div>
                 </form>
             </div>
         </div>

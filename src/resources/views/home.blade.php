@@ -91,7 +91,11 @@
             </div>
 
             <div class="card mt-20">
-                <div id="vue-app" data-csrf="{{ csrf_token() }}" data-post-url="{{ route('bets.store') }}"></div>
+                <div id="vue-app"
+                     data-csrf="{{ csrf_token() }}"
+                     data-post-url="{{ route('bets.store') }}"
+                     data-is-auth="{{ auth()->check() ? '1' : '0' }}"
+                     data-username="{{ auth()->check() ? (auth()->user()->username ?? '') : '' }}"></div>
             </div>
             </div>
             @php($coupons = $coupons ?? [])
