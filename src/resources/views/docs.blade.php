@@ -23,6 +23,7 @@
             <div class="logo">SPORT-KUCKOLD</div>
             <div class="description">Документация по данным «Событий»</div>
             @include('partials.nav')
+            @include('partials.lk')
         </div>
     </header>
     <main>

@@ -15,5 +15,6 @@
                class="text-blue-600 hover:underline {{ request()->is('docs') ? 'font-semibold' : '' }}"
                aria-current="{{ request()->is('docs') ? 'page' : '' }}">Документация</a>
         </li>
+        
     </ul>
 </nav>
