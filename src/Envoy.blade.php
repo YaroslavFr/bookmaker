@@ -40,7 +40,20 @@
     git checkout {{ $branch }}
     # Обновляем локальную ветку из удалённой, чтобы подтянуть недостающие файлы
     git pull --ff-only origin {{ $branch }}
+
+    # Сохраняем текущий src/.env перед жёсткой синхронизацией, чтобы не потерять хостинговые настройки
+    if [ -f "src/.env" ]; then
+        cp -f src/.env src/.env.host.bak
+        echo "Backup src/.env -> src/.env.host.bak"
+    fi
+
     git reset --hard origin/{{ $branch }}
+
+    # Восстанавливаем src/.env из бэкапа, если он был
+    if [ -f "src/.env.host.bak" ]; then
+        mv -f src/.env.host.bak src/.env
+        echo "Restored src/.env from backup to preserve hosting configuration"
+    fi
 
     if [ ! -f "composer.phar" ]; then
         echo "Composer.phar не найден, скачиваю установщик..."
@@ -67,6 +80,36 @@
     echo "Deployment completed successfully"
 @endtask
 
+@task('migrate-fresh', ['on' => 'beget'])
+    cd {{ $path }}
+
+    set -e
+
+    echo "--- Running migrate:fresh (drops all tables and re-creates) ---"
+    {{ $php }} src/artisan migrate:fresh --force
+
+    echo "--- Seeding default data ---"
+    {{ $php }} src/artisan db:seed --force
+
+    echo "--- Rebuilding caches ---"
+    {{ $php }} src/artisan optimize:clear
+    {{ $php }} src/artisan config:cache
+    {{ $php }} src/artisan route:cache
+    {{ $php }} src/artisan view:cache
+
+    echo "migrate-fresh completed"
+@endtask
+
+@task('seed', ['on' => 'beget'])
+    cd {{ $path }}
+
+    set -e
+
+    echo "--- Seeding database (DatabaseSeeder + AdminUserSeeder) ---"
+    {{ $php }} src/artisan db:seed --force
+    echo "Seed completed"
+@endtask
+
 @task('assets', ['on' => 'beget'])
     cd {{ $path }}/src
     echo "--- Checking Node availability ---"
@@ -91,6 +134,20 @@
     ls -la public/build/manifest.json 2>/dev/null || echo "No manifest (Vite build not present). Using fallback if provided."
     ls -la public/css/app.css 2>/dev/null || true
     ls -la public/js/app.js 2>/dev/null || true
+@endtask
+
+@task('sync-odds', ['on' => 'beget'])
+    cd {{ $path }}
+    echo "--- Syncing EPL odds and upcoming events ---"
+    {{ $php }} src/artisan epl:sync-odds --limit=10
+    echo "Sync odds completed"
+@endtask
+
+@task('sync-results', ['on' => 'beget'])
+    cd {{ $path }}
+    echo "--- Syncing EPL finished results and settling bets ---"
+    {{ $php }} src/artisan epl:sync-results --window=48
+    echo "Sync results completed"
 @endtask
 
 @task('diagnose', ['on' => 'beget'])
