@@ -8,29 +8,6 @@
     $admin_username = isset($admin_username) ? $admin_username : '';
     $admin_email = isset($admin_email) ? $admin_email : '';
     $admin_password = isset($admin_password) ? $admin_password : '';
-
-    // Fallback: read ADMIN_* from local .env if not provided via CLI
-    if (empty($admin_username) || empty($admin_email) || empty($admin_password)) {
-        $localEnvPath = __DIR__ . '/.env';
-        $parseEnv = function ($path) {
-            $vars = [];
-            if (file_exists($path)) {
-                foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
-                    if ($line === '' || $line[0] === '#' || strpos($line, '=') === false) { continue; }
-                    [$k, $v] = array_map('trim', explode('=', $line, 2));
-                    $vars[$k] = $v;
-                }
-            }
-            return $vars;
-        };
-        $vars = $parseEnv($localEnvPath);
-        if (empty($vars) && file_exists(__DIR__ . '/.env.example')) {
-            $vars = $parseEnv(__DIR__ . '/.env.example');
-        }
-        if (empty($admin_username) && isset($vars['ADMIN_USERNAME'])) { $admin_username = $vars['ADMIN_USERNAME']; }
-        if (empty($admin_email) && isset($vars['ADMIN_EMAIL'])) { $admin_email = $vars['ADMIN_EMAIL']; }
-        if (empty($admin_password) && isset($vars['ADMIN_PASSWORD'])) { $admin_password = $vars['ADMIN_PASSWORD']; }
-    }
 @endsetup
 
 @servers(['beget' => 'rundosq0_main@rundosq0.beget.tech', 'local' => '127.0.0.1'])
@@ -67,19 +44,7 @@
     # Обновляем локальную ветку из удалённой, чтобы подтянуть недостающие файлы
     git pull --ff-only origin {{ $branch }}
 
-    # Сохраняем текущий src/.env перед жёсткой синхронизацией, чтобы не потерять хостинговые настройки
-    if [ -f "src/.env" ]; then
-        cp -f src/.env src/.env.host.bak
-        echo "Backup src/.env -> src/.env.host.bak"
-    fi
-
     git reset --hard origin/{{ $branch }}
-
-    # Восстанавливаем src/.env из бэкапа, если он был
-    if [ -f "src/.env.host.bak" ]; then
-        mv -f src/.env.host.bak src/.env
-        echo "Restored src/.env from backup to preserve hosting configuration"
-    fi
 
     if [ ! -f "composer.phar" ]; then
         echo "Composer.phar не найден, скачиваю установщик..."
@@ -223,9 +188,6 @@
     echo "Building..."
     npm run build
     echo "Local assets build completed"
-@endtask
-
-@task('assets-upload', ['on' => 'local'])
     echo "--- Uploading build to server ---"
     echo "Source: public/build"
     echo "Destination: {{ $ssh }}:{{ $path }}/src/public/build"
@@ -233,12 +195,6 @@
     scp -r public/build/* {{ $ssh }}:"{{ $path }}/src/public/build/"
     echo "Upload completed"
 @endtask
-
-@story('assets-ci')
-    assets-build
-    assets-upload
-    assets
-@endstory
 
 @task('sync-odds', ['on' => 'beget'])
     cd {{ $path }}
@@ -254,130 +210,33 @@
     echo "Sync results completed"
 @endtask
 
-@task('repair', ['on' => 'beget'])
-    cd {{ $path }}
-
-    set -e
-
-    if [ ! -d ".git" ]; then
-        echo "Не найден .git в {{ $path }} — сначала выполните setup"
-        exit 1
-    fi
-
-    echo "--- Проверка и настройка origin ---"
-    CURRENT_ORIGIN=$(git remote get-url origin || echo "")
-    echo "Текущий origin: $CURRENT_ORIGIN"
-    if [ -n "{{ $origin }}" ]; then
-        if [ "$CURRENT_ORIGIN" != "{{ $origin }}" ]; then
-            echo "Обновляю origin на {{ $origin }}"
-            git remote set-url origin {{ $origin }}
-        else
-            echo "Origin уже корректный"
-        fi
-    fi
-
-    echo "--- Жёсткая синхронизация ветки {{ $branch }} ---"
-    git fetch --all --prune
-    # Переключаемся на ветку, создаём локальную если отсутствует
-    git checkout {{ $branch }} || git checkout -b {{ $branch }} origin/{{ $branch }}
-    # Тянем изменения без merge-коммитов
-    git pull --ff-only origin {{ $branch }} || echo "Предупреждение: pull не прошёл fast-forward"
-    # Полное соответствие удалённой ветке
-    git reset --hard origin/{{ $branch }}
-    # Удаляем лишние неотслеживаемые файлы и каталоги (сохранить public_html)
-    git clean -df -e public_html
-
-    echo "--- Итоговое состояние ---"
-    git rev-parse HEAD || true
-    git status -s || true
-
-    if [ -f "{{ $file }}" ]; then
-        echo "--- Контрольный просмотр файла: {{ $file }} ---"
-        sed -n '1,120p' "{{ $file }}" || cat "{{ $file }}" || true
-        md5sum "{{ $file }}" || openssl md5 "{{ $file }}" || true
-    else
-        echo "Файл не найден: {{ $file }}"
-    fi
-
-    echo "Repair completed"
-@endtask
-
-@task('logs', ['on' => 'beget'])
-    cd {{ $path }}
-    echo "--- Available logs in src/storage/logs ---"
-    ls -la src/storage/logs || echo "Log directory not found at src/storage/logs"
-    LATEST=$(ls -t src/storage/logs/*.log 2>/dev/null | head -n 1)
-    if [ -n "$LATEST" ]; then
-        echo "--- Tailing latest log (last 120 lines): $LATEST ---"
-        tail -n 120 "$LATEST" || echo "Unable to read $LATEST"
-    else
-        echo "No log files found in src/storage/logs"
-    fi
-@endtask
-
-@task('webroot', ['on' => 'beget'])
-    cd {{ $path }}
-    echo "--- public_html listing ---"
-    ls -la public_html || echo "public_html not found"
-    if [ -f "public_html/index.php" ]; then
-        echo "--- public_html/index.php head ---"
-        sed -n '1,80p' public_html/index.php || true
-    else
-        echo "public_html/index.php not found"
-    fi
-@endtask
-
 @task('admin-update', ['on' => 'beget'])
     cd {{ $path }}
     set -e
-    echo "--- Admin .env and user sync ---"
+    echo "--- Admin update without touching .env ---"
 
     if [ -z "{{ $admin_username }}" ] || [ -z "{{ $admin_email }}" ] || [ -z "{{ $admin_password }}" ]; then
-        echo "Укажите параметры: --admin_username= --admin_email= --admin_password="
-        echo "Пример: php vendor/bin/envoy run admin-update --admin_username=admin --admin_email=admin@example.com --admin_password=secret"
-        exit 1
+        echo "Параметры администратора не переданы; пропускаю admin-update."
+        echo "Чтобы обновить админа: --admin_username= --admin_email= --admin_password="
+        exit 0
     fi
 
     cd src
-    if [ -f ".env" ]; then
-        cp -f .env .env.admin.bak
-        echo "Backup .env -> .env.admin.bak"
-    fi
-
-    update_env() {
-        KEY="$1"; VALUE="$2";
-        if grep -q "^$KEY=" .env 2>/dev/null; then
-            # Escape '&' to avoid sed backreference replacement
-            SAFE_VALUE=$(printf '%s' "$VALUE" | sed 's/&/\\&/g')
-            sed -i "s|^$KEY=.*|$KEY=$SAFE_VALUE|" .env
-        else
-            printf "\n%s=%s\n" "$KEY" "$VALUE" >> .env
-        fi
-    }
-
-    touch .env
-    update_env "ADMIN_USERNAME" "{{ $admin_username }}"
-    update_env "ADMIN_EMAIL" "{{ $admin_email }}"
-    update_env "ADMIN_PASSWORD" "{{ $admin_password }}"
 
     echo "--- Running artisan admin:create (force) ---"
     {{ $php }} artisan admin:create --username="{{ $admin_username }}" --email="{{ $admin_email }}" --password="{{ $admin_password }}" --force || {
-        echo "admin:create failed; trying seeder fallback"
+        echo "admin:create failed; trying seeder fallback with env injection"
+        ADMIN_USERNAME="{{ $admin_username }}" ADMIN_EMAIL="{{ $admin_email }}" ADMIN_PASSWORD="{{ $admin_password }}" \
         {{ $php }} artisan db:seed --class=Database\\Seeders\\AdminUserSeeder --force
     }
 
     {{ $php }} artisan optimize:clear
     {{ $php }} artisan config:cache
-    echo "Admin sync completed"
+    echo "Admin update completed (no .env changes)"
 @endtask
-
-@story('admin-sync')
-    admin-update
-@endstory
 
 @story('release')
     assets-build
-    assets-upload
     assets
     admin-update
 @endstory
