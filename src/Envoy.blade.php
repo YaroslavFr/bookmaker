@@ -2,6 +2,9 @@
     $branch = isset($branch) ? $branch : 'main';
     $path = '/home/r/rundosq0/laravel';
     $php = 'php8.4';
+    $file = isset($file) ? $file : 'src/database/seeders/AdminUserSeeder.php';
+    $dir = dirname($file);
+    $origin = isset($origin) ? $origin : '';
 @endsetup
 
 @servers(['beget' => 'rundosq0_main@rundosq0.beget.tech'])
@@ -35,6 +38,8 @@
 
     git fetch --all --prune
     git checkout {{ $branch }}
+    # Обновляем локальную ветку из удалённой, чтобы подтянуть недостающие файлы
+    git pull --ff-only origin {{ $branch }}
     git reset --hard origin/{{ $branch }}
 
     if [ ! -f "composer.phar" ]; then
@@ -44,20 +49,163 @@
         rm composer-setup.php
     fi
 
-    # Чистая установка зависимостей, чтобы избежать конфликтов и предупреждений
-    if [ -d "vendor" ]; then
-        echo "Удаляю существующий каталог vendor/"
-        rm -rf vendor
+    # Чистая установка зависимостей в каталоге src/, чтобы избежать конфликтов
+    if [ -d "src/vendor" ]; then
+        echo "Удаляю существующий каталог src/vendor/"
+        rm -rf src/vendor
     fi
 
-    {{ $php }} composer.phar install --no-dev --prefer-dist --no-progress --no-interaction --classmap-authoritative
+    {{ $php }} composer.phar install --working-dir=src --no-dev --prefer-dist --no-progress --no-interaction --classmap-authoritative
 
-    {{ $php }} artisan migrate --force
+    {{ $php }} src/artisan migrate --force
 
-    {{ $php }} artisan optimize:clear
-    {{ $php }} artisan config:cache
-    {{ $php }} artisan route:cache
-    {{ $php }} artisan view:cache
+    {{ $php }} src/artisan optimize:clear
+    {{ $php }} src/artisan config:cache
+    {{ $php }} src/artisan route:cache
+    {{ $php }} src/artisan view:cache
 
     echo "Deployment completed successfully"
+@endtask
+
+@task('assets', ['on' => 'beget'])
+    cd {{ $path }}/src
+    echo "--- Checking Node availability ---"
+    if command -v node >/dev/null 2>&1; then
+        echo "Node found: $(node -v)"
+        if [ -f package.json ]; then
+            echo "Installing npm deps (ci) in src ..."
+            npm ci || npm install
+            echo "Building Vite assets ..."
+            npm run build || (echo "npm build failed" && exit 1)
+        else
+            echo "package.json not found in src"
+        fi
+    else
+        echo "Node is not available. Applying simple static fallback to public/css/js."
+        mkdir -p public/css public/js
+        cp -f resources/css/app.css public/css/app.css 2>/dev/null || echo "No resources/css/app.css"
+        cp -f resources/js/app.js public/js/app.js 2>/dev/null || echo "No resources/js/app.js"
+    fi
+
+    echo "--- Assets status ---"
+    ls -la public/build/manifest.json 2>/dev/null || echo "No manifest (Vite build not present). Using fallback if provided."
+    ls -la public/css/app.css 2>/dev/null || true
+    ls -la public/js/app.js 2>/dev/null || true
+@endtask
+
+@task('diagnose', ['on' => 'beget'])
+    cd {{ $path }}
+
+    echo "Path: {{ $path }}"
+    echo "Branch (expected): {{ $branch }}"
+    echo "File to check: {{ $file }}"
+
+    if [ ! -d ".git" ]; then
+        echo "Не найден .git в {{ $path }} — сначала выполните setup"
+        exit 1
+    fi
+
+    echo "--- Git remotes ---"
+    git remote -v
+    echo "--- Current branch ---"
+    git branch --show-current || true
+    echo "--- Git toplevel ---"
+    git rev-parse --show-toplevel || true
+    echo "--- core.worktree ---"
+    git config --get core.worktree || true
+    echo "--- HEAD commit ---"
+    git rev-parse HEAD || true
+    echo "--- Status (short) ---"
+    git status -s || true
+    echo "--- Tracked files sample ---"
+    git ls-files | head -n 50 || true
+
+    echo "--- Directory listing: {{ $dir }} ---"
+    ls -la "{{ $dir }}" || echo "Directory not found: {{ $dir }}"
+
+    if [ -f "{{ $file }}" ]; then
+        echo "--- File content head: {{ $file }} ---"
+        sed -n '1,120p' "{{ $file }}" || cat "{{ $file }}" || true
+        echo "--- File metadata ---"
+        ls -l --time-style=long-iso "{{ $file }}" || stat "{{ $file }}" || true
+        echo "--- File checksum (md5) ---"
+        md5sum "{{ $file }}" || openssl md5 "{{ $file }}" || true
+    else
+        echo "Файл не найден: {{ $file }}"
+    fi
+
+    echo "Diagnostics completed"
+@endtask
+
+@task('repair', ['on' => 'beget'])
+    cd {{ $path }}
+
+    set -e
+
+    if [ ! -d ".git" ]; then
+        echo "Не найден .git в {{ $path }} — сначала выполните setup"
+        exit 1
+    fi
+
+    echo "--- Проверка и настройка origin ---"
+    CURRENT_ORIGIN=$(git remote get-url origin || echo "")
+    echo "Текущий origin: $CURRENT_ORIGIN"
+    if [ -n "{{ $origin }}" ]; then
+        if [ "$CURRENT_ORIGIN" != "{{ $origin }}" ]; then
+            echo "Обновляю origin на {{ $origin }}"
+            git remote set-url origin {{ $origin }}
+        else
+            echo "Origin уже корректный"
+        fi
+    fi
+
+    echo "--- Жёсткая синхронизация ветки {{ $branch }} ---"
+    git fetch --all --prune
+    # Переключаемся на ветку, создаём локальную если отсутствует
+    git checkout {{ $branch }} || git checkout -b {{ $branch }} origin/{{ $branch }}
+    # Тянем изменения без merge-коммитов
+    git pull --ff-only origin {{ $branch }} || echo "Предупреждение: pull не прошёл fast-forward"
+    # Полное соответствие удалённой ветке
+    git reset --hard origin/{{ $branch }}
+    # Удаляем лишние неотслеживаемые файлы и каталоги (сохранить public_html)
+    git clean -df -e public_html
+
+    echo "--- Итоговое состояние ---"
+    git rev-parse HEAD || true
+    git status -s || true
+
+    if [ -f "{{ $file }}" ]; then
+        echo "--- Контрольный просмотр файла: {{ $file }} ---"
+        sed -n '1,120p' "{{ $file }}" || cat "{{ $file }}" || true
+        md5sum "{{ $file }}" || openssl md5 "{{ $file }}" || true
+    else
+        echo "Файл не найден: {{ $file }}"
+    fi
+
+    echo "Repair completed"
+@endtask
+
+@task('logs', ['on' => 'beget'])
+    cd {{ $path }}
+    echo "--- Available logs in src/storage/logs ---"
+    ls -la src/storage/logs || echo "Log directory not found at src/storage/logs"
+    LATEST=$(ls -t src/storage/logs/*.log 2>/dev/null | head -n 1)
+    if [ -n "$LATEST" ]; then
+        echo "--- Tailing latest log (last 120 lines): $LATEST ---"
+        tail -n 120 "$LATEST" || echo "Unable to read $LATEST"
+    else
+        echo "No log files found in src/storage/logs"
+    fi
+@endtask
+
+@task('webroot', ['on' => 'beget'])
+    cd {{ $path }}
+    echo "--- public_html listing ---"
+    ls -la public_html || echo "public_html not found"
+    if [ -f "public_html/index.php" ]; then
+        echo "--- public_html/index.php head ---"
+        sed -n '1,80p' public_html/index.php || true
+    else
+        echo "public_html/index.php not found"
+    fi
 @endtask

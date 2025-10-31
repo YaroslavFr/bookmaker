@@ -5,7 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Спорт КУКОЛД</title>
     <link rel="stylesheet" href="{{ asset('css/bets.css') }}">
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @else
+        <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+        <script type="module" defer src="{{ asset('js/app.js') }}"></script>
+    @endif
     
     <style>
         .muted { color: #6b7280; font-size: 12px; }
