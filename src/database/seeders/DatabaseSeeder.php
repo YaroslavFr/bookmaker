@@ -17,11 +17,13 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(AdminUserSeeder::class);
 
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        // В продакшене (или при отсутствии Faker) пропускаем фабрики, чтобы не падать на fake()
+        if (app()->environment('local') && class_exists(\Faker\Generator::class)) {
+            // User::factory(10)->create();
+            User::factory()->create([
+                'name' => 'Test User',
+                'email' => 'test@example.com',
+            ]);
+        }
     }
 }
