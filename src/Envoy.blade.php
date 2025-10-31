@@ -53,6 +53,8 @@
         rm composer-setup.php
     fi
 
+    # Миграции содержат защиту от повторного создания таблицы sessions
+
     # Чистая установка зависимостей в каталоге src/, чтобы избежать конфликтов
     if [ -d "src/vendor" ]; then
         echo "Удаляю существующий каталог src/vendor/"
@@ -236,6 +238,7 @@
 @endtask
 
 @story('release')
+    deploy
     assets-build
     assets
     admin-update

@@ -11,8 +11,10 @@ use App\Http\Controllers\Auth\ResetPasswordController;
 
 Route::get('/', [BetController::class, 'index'])->name('home');
 
-// Страница документации о данных событий
-Route::view('/docs', 'docs')->name('docs');
+// Страница документации о данных событий (только для администратора)
+Route::view('/docs', 'docs')
+    ->name('docs')
+    ->middleware(\App\Http\Middleware\AdminOnly::class);
 Route::post('/bets', [BetController::class, 'store'])->name('bets.store');
 Route::post('/events/{event}/settle', [BetController::class, 'settle'])->name('events.settle');
 Route::get('/events/sync-results', [BetController::class, 'syncResults'])->name('events.sync');
@@ -20,8 +22,8 @@ Route::get('/events/sync-results', [BetController::class, 'syncResults'])->name(
 
 // sstats.net explorer
 Route::get('/sstats', [SstatsController::class, 'index'])->name('sstats.index')->middleware('auth');
-// Statistics page
-Route::get('/stats', [StatsController::class, 'index'])->name('stats.index')->middleware('auth');
+// Statistics page (public access)
+Route::get('/stats', [StatsController::class, 'index'])->name('stats.index');
 
 // Authentication
 Route::middleware('guest')->group(function () {
