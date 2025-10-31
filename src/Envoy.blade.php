@@ -5,9 +5,10 @@
     $file = isset($file) ? $file : 'src/database/seeders/AdminUserSeeder.php';
     $dir = dirname($file);
     $origin = isset($origin) ? $origin : '';
+    $ssh = 'rundosq0_main@rundosq0.beget.tech';
 @endsetup
 
-@servers(['beget' => 'rundosq0_main@rundosq0.beget.tech'])
+@servers(['beget' => 'rundosq0_main@rundosq0.beget.tech', 'local' => '127.0.0.1'])
 
 @task('setup', ['on' => 'beget'])
     @if (!isset($repo) || empty($repo))
@@ -134,7 +135,85 @@
     ls -la public/build/manifest.json 2>/dev/null || echo "No manifest (Vite build not present). Using fallback if provided."
     ls -la public/css/app.css 2>/dev/null || true
     ls -la public/js/app.js 2>/dev/null || true
+
+    echo "--- Syncing public assets to public_html (or using src/public if same) ---"
+    cd {{ $path }}
+    SRC_PUBLIC="{{ $path }}/src/public"
+    DEST_PUBLIC="{{ $path }}/public_html"
+    REAL_SRC=$(readlink -f "$SRC_PUBLIC" 2>/dev/null || echo "$SRC_PUBLIC")
+    REAL_DEST=$(readlink -f "$DEST_PUBLIC" 2>/dev/null || echo "$DEST_PUBLIC")
+    if [ "$REAL_SRC" = "$REAL_DEST" ]; then
+        echo "public_html points to src/public (same path). Skipping copy; using src/public as web root."
+        DEST="$SRC_PUBLIC"
+    else
+        DEST="$DEST_PUBLIC"
+        mkdir -p "$DEST/css" "$DEST/js"
+    fi
+
+    if [ -d "$SRC_PUBLIC/build" ]; then
+        if [ "$REAL_SRC" != "$REAL_DEST" ]; then
+            rm -rf "$DEST/build"
+            mkdir -p "$DEST/build"
+            cp -r "$SRC_PUBLIC/build"/* "$DEST/build/"
+            echo "Copied Vite build to $DEST/build"
+        else
+            echo "Vite build already present at $DEST/build; skip copy"
+        fi
+    else
+        echo "No Vite build directory found; ensuring fallback css/js exist"
+    fi
+
+    if [ -f "$SRC_PUBLIC/css/app.css" ]; then
+        SRC_CSS_REAL=$(readlink -f "$SRC_PUBLIC/css/app.css" 2>/dev/null || echo "$SRC_PUBLIC/css/app.css")
+        DEST_CSS_REAL=$(readlink -f "$DEST/css/app.css" 2>/dev/null || echo "$DEST/css/app.css")
+        if [ "$SRC_CSS_REAL" != "$DEST_CSS_REAL" ]; then
+            cp -f "$SRC_PUBLIC/css/app.css" "$DEST/css/app.css" || true
+            echo "Copied app.css to $DEST/css"
+        else
+            echo "app.css already in place at destination"
+        fi
+    fi
+    if [ -f "$SRC_PUBLIC/js/app.js" ]; then
+        SRC_JS_REAL=$(readlink -f "$SRC_PUBLIC/js/app.js" 2>/dev/null || echo "$SRC_PUBLIC/js/app.js")
+        DEST_JS_REAL=$(readlink -f "$DEST/js/app.js" 2>/dev/null || echo "$DEST/js/app.js")
+        if [ "$SRC_JS_REAL" != "$DEST_JS_REAL" ]; then
+            cp -f "$SRC_PUBLIC/js/app.js" "$DEST/js/app.js" || true
+            echo "Copied app.js to $DEST/js"
+        else
+            echo "app.js already in place at destination"
+        fi
+    fi
+
+    echo "--- Destination listing (build/css/js) ---"
+    ls -la "$DEST/build" 2>/dev/null || echo "No $DEST/build"
+    ls -la "$DEST/css" 2>/dev/null || true
+    ls -la "$DEST/js" 2>/dev/null || true
 @endtask
+
+@task('assets-build', ['on' => 'local'])
+    echo "--- Local assets build (Vite) ---"
+    echo "Node version:" && node -v
+    echo "Installing dependencies..."
+    npm install
+    echo "Building..."
+    npm run build
+    echo "Local assets build completed"
+@endtask
+
+@task('assets-upload', ['on' => 'local'])
+    echo "--- Uploading build to server ---"
+    echo "Source: public/build"
+    echo "Destination: {{ $ssh }}:{{ $path }}/src/public/build"
+    ssh {{ $ssh }} "mkdir -p {{ $path }}/src/public/build/assets"
+    scp -r public/build/* {{ $ssh }}:"{{ $path }}/src/public/build/"
+    echo "Upload completed"
+@endtask
+
+@story('assets-ci')
+    assets-build
+    assets-upload
+    assets
+@endstory
 
 @task('sync-odds', ['on' => 'beget'])
     cd {{ $path }}

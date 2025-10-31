@@ -5,7 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>sstats.net</title>
     <link rel="stylesheet" href="{{ asset('css/bets.css') }}">
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @else
+        <script src="https://cdn.tailwindcss.com"></script>
+    @endif
     <style>
         .muted { color:#777; font-size:12px; }
         .grid { display:grid; grid-template-columns: 1fr; gap: 16px; }
