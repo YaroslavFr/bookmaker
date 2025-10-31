@@ -2,10 +2,35 @@
     $branch = isset($branch) ? $branch : 'main';
     $path = '/home/r/rundosq0/laravel';
     $php = 'php8.4';
-    $file = isset($file) ? $file : 'src/database/seeders/AdminUserSeeder.php';
-    $dir = dirname($file);
     $origin = isset($origin) ? $origin : '';
     $ssh = 'rundosq0_main@rundosq0.beget.tech';
+    // Admin credentials (optional). Pass via: --admin_username= --admin_email= --admin_password=
+    $admin_username = isset($admin_username) ? $admin_username : '';
+    $admin_email = isset($admin_email) ? $admin_email : '';
+    $admin_password = isset($admin_password) ? $admin_password : '';
+
+    // Fallback: read ADMIN_* from local .env if not provided via CLI
+    if (empty($admin_username) || empty($admin_email) || empty($admin_password)) {
+        $localEnvPath = __DIR__ . '/.env';
+        $parseEnv = function ($path) {
+            $vars = [];
+            if (file_exists($path)) {
+                foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+                    if ($line === '' || $line[0] === '#' || strpos($line, '=') === false) { continue; }
+                    [$k, $v] = array_map('trim', explode('=', $line, 2));
+                    $vars[$k] = $v;
+                }
+            }
+            return $vars;
+        };
+        $vars = $parseEnv($localEnvPath);
+        if (empty($vars) && file_exists(__DIR__ . '/.env.example')) {
+            $vars = $parseEnv(__DIR__ . '/.env.example');
+        }
+        if (empty($admin_username) && isset($vars['ADMIN_USERNAME'])) { $admin_username = $vars['ADMIN_USERNAME']; }
+        if (empty($admin_email) && isset($vars['ADMIN_EMAIL'])) { $admin_email = $vars['ADMIN_EMAIL']; }
+        if (empty($admin_password) && isset($vars['ADMIN_PASSWORD'])) { $admin_password = $vars['ADMIN_PASSWORD']; }
+    }
 @endsetup
 
 @servers(['beget' => 'rundosq0_main@rundosq0.beget.tech', 'local' => '127.0.0.1'])
@@ -229,50 +254,6 @@
     echo "Sync results completed"
 @endtask
 
-@task('diagnose', ['on' => 'beget'])
-    cd {{ $path }}
-
-    echo "Path: {{ $path }}"
-    echo "Branch (expected): {{ $branch }}"
-    echo "File to check: {{ $file }}"
-
-    if [ ! -d ".git" ]; then
-        echo "Не найден .git в {{ $path }} — сначала выполните setup"
-        exit 1
-    fi
-
-    echo "--- Git remotes ---"
-    git remote -v
-    echo "--- Current branch ---"
-    git branch --show-current || true
-    echo "--- Git toplevel ---"
-    git rev-parse --show-toplevel || true
-    echo "--- core.worktree ---"
-    git config --get core.worktree || true
-    echo "--- HEAD commit ---"
-    git rev-parse HEAD || true
-    echo "--- Status (short) ---"
-    git status -s || true
-    echo "--- Tracked files sample ---"
-    git ls-files | head -n 50 || true
-
-    echo "--- Directory listing: {{ $dir }} ---"
-    ls -la "{{ $dir }}" || echo "Directory not found: {{ $dir }}"
-
-    if [ -f "{{ $file }}" ]; then
-        echo "--- File content head: {{ $file }} ---"
-        sed -n '1,120p' "{{ $file }}" || cat "{{ $file }}" || true
-        echo "--- File metadata ---"
-        ls -l --time-style=long-iso "{{ $file }}" || stat "{{ $file }}" || true
-        echo "--- File checksum (md5) ---"
-        md5sum "{{ $file }}" || openssl md5 "{{ $file }}" || true
-    else
-        echo "Файл не найден: {{ $file }}"
-    fi
-
-    echo "Diagnostics completed"
-@endtask
-
 @task('repair', ['on' => 'beget'])
     cd {{ $path }}
 
@@ -345,3 +326,58 @@
         echo "public_html/index.php not found"
     fi
 @endtask
+
+@task('admin-update', ['on' => 'beget'])
+    cd {{ $path }}
+    set -e
+    echo "--- Admin .env and user sync ---"
+
+    if [ -z "{{ $admin_username }}" ] || [ -z "{{ $admin_email }}" ] || [ -z "{{ $admin_password }}" ]; then
+        echo "Укажите параметры: --admin_username= --admin_email= --admin_password="
+        echo "Пример: php vendor/bin/envoy run admin-update --admin_username=admin --admin_email=admin@example.com --admin_password=secret"
+        exit 1
+    fi
+
+    cd src
+    if [ -f ".env" ]; then
+        cp -f .env .env.admin.bak
+        echo "Backup .env -> .env.admin.bak"
+    fi
+
+    update_env() {
+        KEY="$1"; VALUE="$2";
+        if grep -q "^$KEY=" .env 2>/dev/null; then
+            # Escape '&' to avoid sed backreference replacement
+            SAFE_VALUE=$(printf '%s' "$VALUE" | sed 's/&/\\&/g')
+            sed -i "s|^$KEY=.*|$KEY=$SAFE_VALUE|" .env
+        else
+            printf "\n%s=%s\n" "$KEY" "$VALUE" >> .env
+        fi
+    }
+
+    touch .env
+    update_env "ADMIN_USERNAME" "{{ $admin_username }}"
+    update_env "ADMIN_EMAIL" "{{ $admin_email }}"
+    update_env "ADMIN_PASSWORD" "{{ $admin_password }}"
+
+    echo "--- Running artisan admin:create (force) ---"
+    {{ $php }} artisan admin:create --username="{{ $admin_username }}" --email="{{ $admin_email }}" --password="{{ $admin_password }}" --force || {
+        echo "admin:create failed; trying seeder fallback"
+        {{ $php }} artisan db:seed --class=Database\\Seeders\\AdminUserSeeder --force
+    }
+
+    {{ $php }} artisan optimize:clear
+    {{ $php }} artisan config:cache
+    echo "Admin sync completed"
+@endtask
+
+@story('admin-sync')
+    admin-update
+@endstory
+
+@story('release')
+    assets-build
+    assets-upload
+    assets
+    admin-update
+@endstory
