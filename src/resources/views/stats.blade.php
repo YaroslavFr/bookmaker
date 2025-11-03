@@ -6,85 +6,6 @@
     <title>Статистика</title>
     <link rel="stylesheet" href="{{ asset('css/bets.css') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <style>
-        .muted { color:#6b7280; font-size:12px; }
-        .grid { display:grid; grid-template-columns: 1fr; gap: 16px; }
-        @media (min-width: 900px) { .grid { grid-template-columns: 1fr 1fr; } }
-        .card { background:#fff; border-radius:8px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,0.1); }
-        .badge { display:inline-block; padding:4px 8px; border-radius:4px; }
-        .badge-info { background:#eef; color:#225; }
-
-        /* Новая адаптивная разметка на div вместо таблиц */
-        .stat-list { display:flex; flex-direction:column; width:100%; }
-        .stat-header { display:none; font-weight:600; padding:8px 0; border-bottom:1px solid #eee; }
-        .stat-row { display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid #eee; }
-        .stat-cell { flex:1; }
-        .stat-cell.value { flex:0 0 auto; min-width:64px; text-align:right; }
-        @media (min-width: 900px) {
-            .stat-header { display:flex; justify-content:space-between; gap:12px; }
-        }
-
-        /* Карточки для сводной статистики по командам */
-        .rcards { display:grid; grid-template-columns:1fr; gap:12px; }
-        @media (min-width: 900px) { .rcards { grid-template-columns: 1fr 1fr; } }
-        .team-stat { border:1px solid #eee; border-radius:8px; padding:12px; }
-        .team-name { font-weight:600; margin-bottom:8px; }
-        .stat-tags { display:flex; flex-wrap:wrap; gap:8px; }
-        .stat-tag { font-size:12px; background:#f9fafb; border:1px solid #eee; border-radius:6px; padding:6px 8px; }
-        .stat-tag .label { color:#6b7280; margin-right:4px; }
-        .stat-tag .value { font-weight:600; }
-
-        /* Аккордион стили */
-        .accordion { margin-bottom: 16px; }
-        .accordion-header { 
-            background: #f8fafc; 
-            border: 1px solid #e2e8f0; 
-            border-radius: 8px; 
-            padding: 16px; 
-            cursor: pointer; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center;
-            transition: all 0.2s ease;
-        }
-        .accordion-header:hover { 
-            background: #f1f5f9; 
-        }
-        .accordion-header.active { 
-            border-bottom-left-radius: 0; 
-            border-bottom-right-radius: 0; 
-            border-bottom: none;
-        }
-        .accordion-title { 
-            font-size: 18px; 
-            font-weight: 600; 
-            color: #1e293b; 
-        }
-        .accordion-icon { 
-            font-size: 14px; 
-            color: #64748b; 
-            transition: transform 0.2s ease; 
-        }
-        .accordion-icon.rotated { 
-            transform: rotate(180deg); 
-        }
-        .accordion-content { 
-            border: 1px solid #e2e8f0; 
-            border-top: none; 
-            border-bottom-left-radius: 8px; 
-            border-bottom-right-radius: 8px; 
-            padding: 0; 
-            transition: max-height 0.3s ease, padding 0.3s ease; 
-        }
-        .accordion-header.active + .accordion-content{
-            visibility: visible;
-            padding: 16px;
-        }
-        .accordion-content { 
-            visibility: hidden;
-            padding: 0; 
-        }
-    </style>
     </head>
 <body>
     @include('partials.header')
@@ -95,101 +16,102 @@
             </div>
 
             @if(!empty($error))
-                <div class="card"><span class="badge badge-info">Ошибка: {{ $error }}</span></div>
+                <div class="bg-white rounded-lg p-4 shadow"><span class="inline-block px-2 py-1 rounded bg-blue-100 text-blue-900">Ошибка: {{ $error }}</span></div>
             @endif
 
-            <!-- Аккордион для Английской Премьер-лиги -->
-            <div class="accordion">
-                <div class="accordion-header">
-                    <div class="accordion-title">Английская Премьер-лига</div>
-                    <div class="accordion-icon">▼</div>
+            @php($leagues = $leagues ?? [])
+            @foreach($leagues as $lg)
+            <div class="accordion mb-4">
+                <div class="accordion-header border-2 border-gray-100 rounded-lg p-4 cursor-pointer flex justify-between items-center transition hover:bg-slate-100">
+                    <div class="accordion-title text-lg font-semibold text-slate-800">{{ $lg['name'] }}</div>
+                    <div class="accordion-icon text-sm text-slate-500 transition-transform">▼</div>
                 </div>
-                <div class="accordion-content">
-                    @php($aggr = $aggregates ?? null)
+                <div class="accordion-content border-2 border-gray-100 rounded-b-lg p-0 hidden">
+                    @php($aggr = $lg['aggregates'] ?? null)
                     @if($aggr)
-                    <div class="grid">
-                        <div class="card">
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div class="bg-white rounded-lg p-4 shadow">
                             <h2>Самая забивающая команда</h2>
                             <p><strong>Всего:</strong> {{ $aggr['most_scoring_overall']['team'] ?? '—' }} ({{ $aggr['most_scoring_overall']['goals'] ?? '—' }})</p>
                             <p><strong>Дома:</strong> {{ $aggr['most_scoring_home']['team'] ?? '—' }} ({{ $aggr['most_scoring_home']['goals'] ?? '—' }})</p>
                             <p><strong>В гостях:</strong> {{ $aggr['most_scoring_away']['team'] ?? '—' }} ({{ $aggr['most_scoring_away']['goals'] ?? '—' }})</p>
                         </div>
-                        <div class="card">
+                        <div class="bg-white rounded-lg p-4 shadow">
                             <h2>Самая пропускающая команда</h2>
                             <p><strong>Дома:</strong> {{ $aggr['most_conceding_home']['team'] ?? '—' }} ({{ $aggr['most_conceding_home']['goals'] ?? '—' }})</p>
                             <p><strong>В гостях:</strong> {{ $aggr['most_conceding_away']['team'] ?? '—' }} ({{ $aggr['most_conceding_away']['goals'] ?? '—' }})</p>
                         </div>
                     </div>
 
-                    <div class="grid">
-                        <div class="card">
-                            <h2>Топ-10 по забитым</h2>
-                            <div class="stat-list">
-                                <div class="stat-header">
-                                    <div class="stat-cell">Команда</div>
-                                    <div class="stat-cell value">Голы</div>
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 mt-4">
+                        <div class="bg-white rounded-lg p-4 shadow">
+                            <h2 class="font-bold mb-4">Топ-10 по забитым</h2>
+                            <div class="flex flex-col w-full">
+                                <div class="hidden md:flex justify-between gap-3 border-1 border-gray-100 py-2 font-semibold">
+                                    <div class="flex-1">Команда</div>
+                                    <div class="flex-none text-right min-w-[64px]">Голы</div>
                                 </div>
                                 @foreach(($aggr['top_scoring'] ?? []) as $row)
-                                    <div class="stat-row">
-                                        <div class="stat-cell">{{ $row['team'] }}</div>
-                                        <div class="stat-cell value">{{ $row['goals'] }}</div>
+                                    <div class="flex justify-between gap-3 border-b-1 border-gray-100 p-2">
+                                        <div class="flex-1">{{ $row['team'] }}</div>
+                                        <div class="flex-none text-right min-w-[64px]">{{ $row['goals'] }}</div>
                                     </div>
                                 @endforeach
                             </div>
                         </div>
-                        <div class="card">
-                            <h2>Топ-10 по пропущенным</h2>
-                            <div class="stat-list">
-                                <div class="stat-header">
-                                    <div class="stat-cell">Команда</div>
-                                    <div class="stat-cell value">Пропущено</div>
+                        <div class="bg-white rounded-lg p-4 shadow">
+                            <h2 class="font-bold mb-4">Топ-10 по пропущенным</h2>
+                            <div class="flex flex-col w-full">
+                                <div class="hidden md:flex justify-between gap-3 border-b-1 border-gray-100 py-2 font-semibold">
+                                    <div class="flex-1">Команда</div>
+                                    <div class="flex-none text-right min-w-[64px]">Пропущено</div>
                                 </div>
                                 @foreach(($aggr['top_conceding'] ?? []) as $row)
-                                    <div class="stat-row">
-                                        <div class="stat-cell">{{ $row['team'] }}</div>
-                                        <div class="stat-cell value">{{ $row['goals'] }}</div>
+                                    <div class="flex justify-between gap-3 border-b-1 border-gray-100 py-2">
+                                        <div class="flex-1">{{ $row['team'] }}</div>
+                                        <div class="flex-none text-right min-w-[64px]">{{ $row['goals'] }}</div>
                                     </div>
                                 @endforeach
                             </div>
                         </div>
                     </div>
 
-                    <div class="card">
-                        <h2>Топ-10 по победам</h2>
-                        <div class="stat-list">
-                            <div class="stat-header">
-                                <div class="stat-cell">Команда</div>
-                                <div class="stat-cell value">Победы</div>
+                    <div class="bg-white rounded-lg p-4 shadow mt-4">
+                        <h2 class="font-bold mb-4">Топ-10 по победам</h2>
+                        <div class="flex flex-col w-full">
+                            <div class="hidden md:flex justify-between gap-3 border-b py-2 border-gray-100 font-semibold">
+                                <div class="flex-1">Команда</div>
+                                <div class="flex-none text-right min-w-[64px]">Победы</div>
                             </div>
                             @foreach(($aggr['top_wins'] ?? []) as $row)
-                                <div class="stat-row">
-                                    <div class="stat-cell">{{ $row['team'] }}</div>
-                                    <div class="stat-cell value">{{ $row['wins'] }}</div>
+                                <div class="flex justify-between gap-3 border-gray-100 border-b py-2">
+                                    <div class="flex-1">{{ $row['team'] }}</div>
+                                    <div class="flex-none text-right min-w-[64px]">{{ $row['wins'] }}</div>
                                 </div>
                             @endforeach
                         </div>
                     </div>
                     @endif
 
-                    <div class="card">
-                        <h2>Все команды — сводная статистика</h2>
-                        @php($stats = $teamStats ?? [])
+                    <div class="bg-white rounded-lg p-4 shadow mt-4">
+                        <h2 class="font-bold mb-4">Все команды — сводная статистика</h2>
+                        @php($stats = $lg['teamStats'] ?? [])
                         @if(empty($stats))
-                            <p class="muted">Нет данных для сводной таблицы.</p>
+                            <p class="text-gray-500 text-xs">Нет данных для сводной таблицы.</p>
                         @else
-                        <div class="rcards">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                             @foreach($stats as $team => $st)
-                                <div class="team-stat">
-                                    <div class="team-name">{{ $team }}</div>
-                                    <div class="stat-tags">
-                                        <div class="stat-tag"><span class="label">Матчи</span><span class="value">{{ $st['matches'] }}</span></div>
-                                        <div class="stat-tag"><span class="label">Забитые</span><span class="value">{{ $st['goals_for'] }}</span></div>
-                                        <div class="stat-tag"><span class="label">Пропущенные</span><span class="value">{{ $st['goals_against'] }}</span></div>
-                                        <div class="stat-tag"><span class="label">Победы</span><span class="value">{{ $st['wins'] }}</span></div>
-                                        <div class="stat-tag"><span class="label">Ничьи</span><span class="value">{{ $st['draws'] }}</span></div>
-                                        <div class="stat-tag"><span class="label">Поражения</span><span class="value">{{ $st['losses'] }}</span></div>
-                                        <div class="stat-tag"><span class="label">Дома</span><span class="value">{{ $st['home']['goals_for'] }} / {{ $st['home']['goals_against'] }}</span></div>
-                                        <div class="stat-tag"><span class="label">В гостях</span><span class="value">{{ $st['away']['goals_for'] }} / {{ $st['away']['goals_against'] }}</span></div>
+                                <div class="border border-gray-200 rounded-lg p-3">
+                                    <div class="font-semibold mb-2">{{ $team }}</div>
+                                    <div class="flex flex-wrap gap-2">
+                                        <div class="text-xs bg-gray-50 border border-gray-200 rounded-md px-2 py-1"><span class="text-gray-500 mr-1">Матчи</span><span class="font-semibold">{{ $st['matches'] }}</span></div>
+                                        <div class="text-xs bg-gray-50 border border-gray-200 rounded-md px-2 py-1"><span class="text-gray-500 mr-1">Забитые</span><span class="font-semibold">{{ $st['goals_for'] }}</span></div>
+                                        <div class="text-xs bg-gray-50 border border-gray-200 rounded-md px-2 py-1"><span class="text-gray-500 mr-1">Пропущенные</span><span class="font-semibold">{{ $st['goals_against'] }}</span></div>
+                                        <div class="text-xs bg-gray-50 border border-gray-200 rounded-md px-2 py-1"><span class="text-gray-500 mr-1">Победы</span><span class="font-semibold">{{ $st['wins'] }}</span></div>
+                                        <div class="text-xs bg-gray-50 border border-gray-200 rounded-md px-2 py-1"><span class="text-gray-500 mr-1">Ничьи</span><span class="font-semibold">{{ $st['draws'] }}</span></div>
+                                        <div class="text-xs bg-gray-50 border border-gray-200 rounded-md px-2 py-1"><span class="text-gray-500 mr-1">Поражения</span><span class="font-semibold">{{ $st['losses'] }}</span></div>
+                                        <div class="text-xs bg-gray-50 border border-gray-200 rounded-md px-2 py-1"><span class="text-gray-500 mr-1">Дома</span><span class="font-semibold">{{ $st['home']['goals_for'] }} / {{ $st['home']['goals_against'] }}</span></div>
+                                        <div class="text-xs bg-gray-50 border border-gray-200 rounded-md px-2 py-1"><span class="text-gray-500 mr-1">В гостях</span><span class="font-semibold">{{ $st['away']['goals_for'] }} / {{ $st['away']['goals_against'] }}</span></div>
                                     </div>
                                 </div>
                             @endforeach
@@ -197,24 +119,26 @@
                         @endif
                     </div>
 
-                    <p class="muted">Источник: API-Sport.ru (EPL). Период: последние 120 дней.</p>
+                    <p class="text-gray-500 text-xs">Источник: sstats.net. Период: последние 120 дней.</p>
                 </div>
             </div>
+            @endforeach
         </div>
     </main>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Инициализация аккордиона
             const accordionHeaders = document.querySelectorAll('.accordion-header');
-            
             accordionHeaders.forEach(header => {
                 header.addEventListener('click', function() {
                     const icon = this.querySelector('.accordion-icon');
-                    
-                    // Переключаем активное состояние
-                    this.classList.toggle('active');
-                    icon.classList.toggle('rotated');
+                    const content = this.nextElementSibling;
+                    // Tailwind-переключения
+                    this.classList.toggle('rounded-b-none');
+                    this.classList.toggle('border-b-0');
+                    icon.classList.toggle('rotate-180');
+                    content.classList.toggle('hidden');
+                    content.classList.toggle('p-4');
                 });
             });
         });

@@ -193,7 +193,7 @@ function handleOddClick(e) {
                     <ul class="doc-list">
                         <li>Маршрут: <code class="doc-kbd">GET /stats</code>, имя <code class="doc-kbd">stats.index</code>, контроллер <code class="doc-kbd">StatsController</code>.</li>
                         <li>Представление: <code class="doc-kbd">resources/views/stats.blade.php</code> — сводка по командам и агрегаты.</li>
-                        <li>Источник данных: <strong>API-Sport.ru</strong>; ключи и базовый URL берутся из <code class="doc-kbd">config/services.php</code> (<code class="doc-kbd">API_SPORT_KEY</code>, <code class="doc-kbd">API_SPORT_BASE</code>).</li>
+                        <li>Источник данных: <strong>sstats.net</strong>; ключ и базовый URL берутся из <code class="doc-kbd">config/services.php</code> (<code class="doc-kbd">SSTATS_API_KEY</code>, <code class="doc-kbd">SSTATS_BASE</code>).</li>
                         <li>Турнир по умолчанию: <span class="muted">EPL (tournamentId=17)</span>; период выборки — <span class="muted">последние 120 дней</span>.</li>
                         <li>Кеширование результатов матчей и расчёт метрик: <span class="muted">матчи, забитые/пропущенные, победы/ничьи/поражения, дома/в гостях</span>.</li>
                         <li>Агрегаты: <span class="muted">самые забивающие/пропускающие (дом/гости), топ-10 по голам и победам</span>.</li>
@@ -203,12 +203,7 @@ function handleOddClick(e) {
 Route::get('/stats', StatsController::class)->name('stats.index');
 
 // config/services.php (.env)
-// API-Sport
-API_SPORT_KEY=your_api_key
-API_SPORT_BASE=https://&lt;base&gt;
-
-// Дополнительно: Odds и SStats (для других страниц)
-ODDS_API_KEY=your_odds_key
+// sstats
 SSTATS_API_KEY=your_sstats_key
 SSTATS_BASE=https://&lt;base&gt;
 

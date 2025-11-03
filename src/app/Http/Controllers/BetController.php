@@ -133,22 +133,36 @@ class BetController extends Controller
     public function syncResults()
     {
         try {
-            $resp = Http::get('https://www.thesportsdb.com/api/json/3/eventspastleague.php', [
-                'id' => 4328,
+            // Use sstats.net as the single source of truth for ended games
+            $base = rtrim(config('services.sstats.base_url', 'https://api.sstats.net'), '/');
+            $key = config('services.sstats.key');
+            $headers = $key ? ['X-API-KEY' => $key] : [];
+            if (!$key) {
+                return redirect()->route('home')->with('status', 'SSTATS_API_KEY отсутствует');
+            }
+
+            // EPL by default
+            $leagueId = 39; $year = (int) date('Y');
+            $resp = Http::withHeaders($headers)->timeout(30)->get($base.'/Games/list', [
+                'leagueid' => $leagueId,
+                'year' => $year,
+                'limit' => 500,
+                'ended' => true,
             ]);
             if ($resp->failed()) {
-                return redirect()->route('home')->with('status', 'Не удалось получить результаты из API');
+                return redirect()->route('home')->with('status', 'Не удалось получить результаты из sstats');
             }
-            $data = $resp->json();
-            $eventsApi = collect($data['events'] ?? []);
+            $eventsApi = collect($resp->json('data') ?? []);
 
             $updated = 0;
             foreach ($eventsApi as $apiEv) {
-                $home = strtolower(trim($apiEv['strHomeTeam'] ?? ''));
-                $away = strtolower(trim($apiEv['strAwayTeam'] ?? ''));
-                $homeScore = is_numeric($apiEv['intHomeScore'] ?? null) ? (int)$apiEv['intHomeScore'] : null;
-                $awayScore = is_numeric($apiEv['intAwayScore'] ?? null) ? (int)$apiEv['intAwayScore'] : null;
-                $ts = $apiEv['strTimestamp'] ?? ($apiEv['dateEvent'] ?? null);
+                $homeName = data_get($apiEv, 'homeTeam.name');
+                $awayName = data_get($apiEv, 'awayTeam.name');
+                $home = strtolower(trim((string) $homeName));
+                $away = strtolower(trim((string) $awayName));
+                $homeScore = is_numeric($apiEv['homeResult'] ?? null) ? (int)$apiEv['homeResult'] : null;
+                $awayScore = is_numeric($apiEv['awayResult'] ?? null) ? (int)$apiEv['awayResult'] : null;
+                $ts = $apiEv['date'] ?? null;
                 $apiTime = $ts ? Carbon::parse($ts) : null;
 
                 // Требуем валидные счёты и только прошедшие матчи
@@ -166,11 +180,11 @@ class BetController extends Controller
                     if ($homeScore > $awayScore) $result = 'home';
                     elseif ($awayScore > $homeScore) $result = 'away';
 
-                    $title = trim(($apiEv['strHomeTeam'] ?? '').' vs '.($apiEv['strAwayTeam'] ?? ''));
+                    $title = trim(($homeName ?? '').' vs '.($awayName ?? ''));
                     Event::create([
                         'title' => $title ?: ($home.' vs '.$away),
-                        'home_team' => $apiEv['strHomeTeam'] ?? $home,
-                        'away_team' => $apiEv['strAwayTeam'] ?? $away,
+                        'home_team' => $homeName ?? $home,
+                        'away_team' => $awayName ?? $away,
                         'status' => 'finished',
                         'result' => $result,
                         'starts_at' => $apiTime,
