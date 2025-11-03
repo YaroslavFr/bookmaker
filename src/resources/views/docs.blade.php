@@ -38,6 +38,7 @@
                     <li><a href="#sync-results">Синхронизация результатов</a></li>
                     <li><a href="#display">Отображение и купон</a></li>
                     <li><a href="#keys">Ключи и планировщик</a></li>
+                    <li><a href="#stats">Статистика (страница /stats)</a></li>
                     <li><a href="#deploy">Деплой</a></li>
                 </ul>
             </div>
@@ -183,6 +184,37 @@ function handleOddClick(e) {
                         <li>Планировщик: ежедневно <code class="doc-kbd">epl:sync-odds</code> в 06:00; ежечасно <code class="doc-kbd">epl:sync-results</code>.</li>
                         <li>Маршрут быстрого обновления результатов: <code class="doc-kbd">GET /events/sync-results</code>.</li>
                     </ul>
+                </div>
+            </section>
+
+            <section class="doc-section" id="stats">
+                <div class="doc-card">
+                    <h2>Статистика (страница /stats)</h2>
+                    <ul class="doc-list">
+                        <li>Маршрут: <code class="doc-kbd">GET /stats</code>, имя <code class="doc-kbd">stats.index</code>, контроллер <code class="doc-kbd">StatsController</code>.</li>
+                        <li>Представление: <code class="doc-kbd">resources/views/stats.blade.php</code> — сводка по командам и агрегаты.</li>
+                        <li>Источник данных: <strong>API-Sport.ru</strong>; ключи и базовый URL берутся из <code class="doc-kbd">config/services.php</code> (<code class="doc-kbd">API_SPORT_KEY</code>, <code class="doc-kbd">API_SPORT_BASE</code>).</li>
+                        <li>Турнир по умолчанию: <span class="muted">EPL (tournamentId=17)</span>; период выборки — <span class="muted">последние 120 дней</span>.</li>
+                        <li>Кеширование результатов матчей и расчёт метрик: <span class="muted">матчи, забитые/пропущенные, победы/ничьи/поражения, дома/в гостях</span>.</li>
+                        <li>Агрегаты: <span class="muted">самые забивающие/пропускающие (дом/гости), топ-10 по голам и победам</span>.</li>
+                        <li>Обработка ошибок: при недоступности API выводится сообщение и используются безопасные значения <code class="doc-kbd">—</code>.</li>
+                    </ul>
+                    <div class="doc-code"><pre><code>// routes/web.php
+Route::get('/stats', StatsController::class)->name('stats.index');
+
+// config/services.php (.env)
+// API-Sport
+API_SPORT_KEY=your_api_key
+API_SPORT_BASE=https://&lt;base&gt;
+
+// Дополнительно: Odds и SStats (для других страниц)
+ODDS_API_KEY=your_odds_key
+SSTATS_API_KEY=your_sstats_key
+SSTATS_BASE=https://&lt;base&gt;
+
+// Примечание: смена турнира — корректируйте ID в StatsController
+</code></pre></div>
+                    <p class="muted">Быстрая проверка: установите ключи в <code class="doc-kbd">.env</code>, запустите сервер и откройте <code class="doc-kbd">/stats</code>.</p>
                 </div>
             </section>
 
