@@ -29,7 +29,7 @@ class BetController extends Controller
         // Expect one coupon with many items (parlay)
         $data = $request->validate([
             // Если пользователь авторизован, имя игрока не требуется — используем его логин (username)
-            'bettor_name' => [auth()->check() ? 'nullable' : 'required', 'string', 'max:100'],
+            'bettor_name' => [\Illuminate\Support\Facades\Auth::check() ? 'nullable' : 'required', 'string', 'max:100'],
             'amount_demo' => ['required', 'numeric', 'min:0.01'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.event_id' => ['required', 'exists:events,id'],
@@ -38,8 +38,8 @@ class BetController extends Controller
 
         // Определяем имя игрока: для авторизованного — username, иначе — из формы
         $bettorName = $data['bettor_name'] ?? null;
-        if (auth()->check()) {
-            $user = auth()->user();
+        if (\Illuminate\Support\Facades\Auth::check()) {
+            $user = \Illuminate\Support\Facades\Auth::user();
             $bettorName = trim((string) ($user->username ?? $user->email ?? '')) ?: 'User';
         }
 

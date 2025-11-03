@@ -47,12 +47,12 @@
                         <div class="bg-white rounded-lg p-4 shadow">
                             <h2 class="font-bold mb-4">Топ-10 по забитым</h2>
                             <div class="flex flex-col w-full">
-                                <div class="hidden md:flex justify-between gap-3 border-1 border-gray-100 py-2 font-semibold">
+                                <div class="hidden md:flex justify-between gap-3 border border-gray-100 py-2 font-semibold">
                                     <div class="flex-1">Команда</div>
                                     <div class="flex-none text-right min-w-[64px]">Голы</div>
                                 </div>
                                 @foreach(($aggr['top_scoring'] ?? []) as $row)
-                                    <div class="flex justify-between gap-3 border-b-1 border-gray-100 p-2">
+                                    <div class="flex justify-between gap-3 border-b border-gray-100 p-2">
                                         <div class="flex-1">{{ $row['team'] }}</div>
                                         <div class="flex-none text-right min-w-[64px]">{{ $row['goals'] }}</div>
                                     </div>
@@ -62,12 +62,12 @@
                         <div class="bg-white rounded-lg p-4 shadow">
                             <h2 class="font-bold mb-4">Топ-10 по пропущенным</h2>
                             <div class="flex flex-col w-full">
-                                <div class="hidden md:flex justify-between gap-3 border-b-1 border-gray-100 py-2 font-semibold">
+                                <div class="hidden md:flex justify-between gap-3 border-b border-gray-100 py-2 font-semibold">
                                     <div class="flex-1">Команда</div>
                                     <div class="flex-none text-right min-w-[64px]">Пропущено</div>
                                 </div>
                                 @foreach(($aggr['top_conceding'] ?? []) as $row)
-                                    <div class="flex justify-between gap-3 border-b-1 border-gray-100 py-2">
+                                    <div class="flex justify-between gap-3 border-b border-gray-100 py-2">
                                         <div class="flex-1">{{ $row['team'] }}</div>
                                         <div class="flex-none text-right min-w-[64px]">{{ $row['goals'] }}</div>
                                     </div>
