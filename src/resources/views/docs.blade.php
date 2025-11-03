@@ -236,6 +236,24 @@ envoy run release --server=beget --branch=main \
 # Локальная проверка ассетов (если требуется)
 envoy run assets-build --server=local && envoy run assets --server=beget
 </code></pre></div>
+
+                    <h2>Как запустить Envoy</h2>
+                    <ul class="doc-list">
+                        <li><strong>Через Docker Compose (рекомендуется):</strong> команды исполняются внутри контейнера <code class="doc-kbd">app</code>.</li>
+                        <li><strong>Локально (Windows):</strong> выполните из каталога <code class="doc-kbd">src</code> команду <code class="doc-kbd">php vendor/bin/envoy ...</code>.</li>
+                    </ul>
+                    <div class="doc-code"><pre><code># Проверить, что Envoy доступен (в контейнере)
+docker compose exec app vendor/bin/envoy list
+
+# Запустить релиз (в контейнере)
+docker compose exec app vendor/bin/envoy run release --server=beget --branch=main
+
+# Запустить релиз локально (если PHP установлен и вы в каталоге src)
+php vendor/bin/envoy run release --server=beget --branch=main
+
+# Подсказка: чтобы увидеть список задач
+docker compose exec app vendor/bin/envoy tasks
+</code></pre></div>
                 </div>
             </section>
         </div>
