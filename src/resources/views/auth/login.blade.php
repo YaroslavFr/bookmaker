@@ -10,7 +10,8 @@
         .login-wrap { max-width: 420px; margin: 24px auto; }
         .form-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
         .form-row label { font-size: 14px; color: #374151; }
-        .form-row input[type="email"], .form-row input[type="password"] { padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; }
+        /* Добавляем text, чтобы логин имел те же стили, что и пароль */
+        .form-row input[type="email"], .form-row input[type="password"], .form-row input[type="text"] { padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; }
         .error { color: #b91c1c; font-size: 13px; }
     </style>
     </head>
