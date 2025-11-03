@@ -30,22 +30,29 @@
 @endtask
 
 @task('deploy', ['on' => 'beget'])
+    # Переходим в корневую директорию проекта на сервере
     cd {{ $path }}
 
+    # Останавливаем выполнение при любой ошибке (fail fast)
     set -e
 
+    # Проверяем, что каталог является git-репозиторием
     if [ ! -d ".git" ]; then
         echo "Не найден .git в {{ $path }}. Сначала выполните: envoy run setup --repo=<URL> --branch={{ $branch }}"
         exit 1
     fi
 
+    # Обновляем ссылки на удалённые ветки и очищаем устаревшие
     git fetch --all --prune
+    # Переключаемся на целевую ветку деплоя
     git checkout {{ $branch }}
-    # Обновляем локальную ветку из удалённой, чтобы подтянуть недостающие файлы
+    # Обновляем локальную ветку из origin, допускаем только fast-forward, без merge-коммитов
     git pull --ff-only origin {{ $branch }}
 
+    # Жёстко синхронизируем рабочее дерево со состоянием origin/{{ $branch }}
     git reset --hard origin/{{ $branch }}
 
+    # Скачиваем локальный composer.phar, если он отсутствует
     if [ ! -f "composer.phar" ]; then
         echo "Composer.phar не найден, скачиваю установщик..."
         curl -sS https://getcomposer.org/installer -o composer-setup.php
@@ -55,21 +62,30 @@
 
     # Миграции содержат защиту от повторного создания таблицы sessions
 
-    # Чистая установка зависимостей в каталоге src/, чтобы избежать конфликтов
+    # Удаляем существующие зависимости (vendor) для чистой установки без конфликтов
     if [ -d "src/vendor" ]; then
         echo "Удаляю существующий каталог src/vendor/"
         rm -rf src/vendor
     fi
 
+    # Устанавливаем прод-зависимости внутри каталога src/
+    #  --no-dev             исключаем dev-пакеты
+    #  --prefer-dist        загружаем дистрибутивы (быстрее, меньше трафика)
+    #  --no-progress        скрываем прогресс-бар (чище логи)
+    #  --no-interaction     не задаём вопросы (автоматический режим)
+    #  --classmap-authoritative ускоряет автозагрузку в продакшене
     {{ $php }} composer.phar install --working-dir=src --no-dev --prefer-dist --no-progress --no-interaction --classmap-authoritative
 
+    # Применяем миграции базы данных в продакшене
     {{ $php }} src/artisan migrate --force
 
-    {{ $php }} src/artisan optimize:clear
-    {{ $php }} src/artisan config:cache
-    {{ $php }} src/artisan route:cache
-    {{ $php }} src/artisan view:cache
+    # Очищаем кеши, затем прогреваем основные кеши приложения
+    {{ $php }} src/artisan optimize:clear   # очищаем все кеши (config, route, view, app)
+    {{ $php }} src/artisan config:cache    # компилируем и кешируем конфигурацию
+    {{ $php }} src/artisan route:cache     # компилируем и кешируем маршруты
+    {{ $php }} src/artisan view:cache      # компилируем Blade-шаблоны
 
+    # Финальное сообщение об успешном завершении деплоя
     echo "Deployment completed successfully"
 @endtask
 

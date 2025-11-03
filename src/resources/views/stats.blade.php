@@ -11,25 +11,32 @@
         .grid { display:grid; grid-template-columns: 1fr; gap: 16px; }
         @media (min-width: 900px) { .grid { grid-template-columns: 1fr 1fr; } }
         .card { background:#fff; border-radius:8px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,0.1); }
-        table { width:100%; border-collapse: collapse; }
-        th, td { padding:8px; border-bottom:1px solid #eee; text-align:left; }
         .badge { display:inline-block; padding:4px 8px; border-radius:4px; }
         .badge-info { background:#eef; color:#225; }
+
+        /* Новая адаптивная разметка на div вместо таблиц */
+        .stat-list { display:flex; flex-direction:column; width:100%; }
+        .stat-header { display:none; font-weight:600; padding:8px 0; border-bottom:1px solid #eee; }
+        .stat-row { display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid #eee; }
+        .stat-cell { flex:1; }
+        .stat-cell.value { flex:0 0 auto; min-width:64px; text-align:right; }
+        @media (min-width: 900px) {
+            .stat-header { display:flex; justify-content:space-between; gap:12px; }
+        }
+
+        /* Карточки для сводной статистики по командам */
+        .rcards { display:grid; grid-template-columns:1fr; gap:12px; }
+        @media (min-width: 900px) { .rcards { grid-template-columns: 1fr 1fr; } }
+        .team-stat { border:1px solid #eee; border-radius:8px; padding:12px; }
+        .team-name { font-weight:600; margin-bottom:8px; }
+        .stat-tags { display:flex; flex-wrap:wrap; gap:8px; }
+        .stat-tag { font-size:12px; background:#f9fafb; border:1px solid #eee; border-radius:6px; padding:6px 8px; }
+        .stat-tag .label { color:#6b7280; margin-right:4px; }
+        .stat-tag .value { font-weight:600; }
     </style>
     </head>
 <body>
-    <header class="hero">
-        <div class="container grid grid-cols-1 md:grid-cols-[7fr_3fr]">
-            <div>
-                <div class="logo">SPORT-KUCKOLD</div>
-                <div class="description">Для тех кто любит смотреть спорт</div>
-                @include('partials.nav')
-            </div>            
-            <div>
-                @include('partials.lk')
-            </div>
-        </div>
-    </header>
+    @include('partials.header')
     <main>
         <div class="container">
             <div class="row">
@@ -59,38 +66,50 @@
             <div class="grid">
                 <div class="card">
                     <h2>Топ-10 по забитым</h2>
-                    <table class="responsive-table">
-                        <thead><tr><th>Команда</th><th>Голы</th></tr></thead>
-                        <tbody>
+                    <div class="stat-list">
+                        <div class="stat-header">
+                            <div class="stat-cell">Команда</div>
+                            <div class="stat-cell value">Голы</div>
+                        </div>
                         @foreach(($aggr['top_scoring'] ?? []) as $row)
-                            <tr><td>{{ $row['team'] }}</td><td>{{ $row['goals'] }}</td></tr>
+                            <div class="stat-row">
+                                <div class="stat-cell">{{ $row['team'] }}</div>
+                                <div class="stat-cell value">{{ $row['goals'] }}</div>
+                            </div>
                         @endforeach
-                        </tbody>
-                    </table>
+                    </div>
                 </div>
                 <div class="card">
                     <h2>Топ-10 по пропущенным</h2>
-                    <table class="responsive-table">
-                        <thead><tr><th>Команда</th><th>Пропущено</th></tr></thead>
-                        <tbody>
+                    <div class="stat-list">
+                        <div class="stat-header">
+                            <div class="stat-cell">Команда</div>
+                            <div class="stat-cell value">Пропущено</div>
+                        </div>
                         @foreach(($aggr['top_conceding'] ?? []) as $row)
-                            <tr><td>{{ $row['team'] }}</td><td>{{ $row['goals'] }}</td></tr>
+                            <div class="stat-row">
+                                <div class="stat-cell">{{ $row['team'] }}</div>
+                                <div class="stat-cell value">{{ $row['goals'] }}</div>
+                            </div>
                         @endforeach
-                        </tbody>
-                    </table>
+                    </div>
                 </div>
             </div>
 
             <div class="card">
                 <h2>Топ-10 по победам</h2>
-                <table class="responsive-table">
-                    <thead><tr><th>Команда</th><th>Победы</th></tr></thead>
-                    <tbody>
+                <div class="stat-list">
+                    <div class="stat-header">
+                        <div class="stat-cell">Команда</div>
+                        <div class="stat-cell value">Победы</div>
+                    </div>
                     @foreach(($aggr['top_wins'] ?? []) as $row)
-                        <tr><td>{{ $row['team'] }}</td><td>{{ $row['wins'] }}</td></tr>
+                        <div class="stat-row">
+                            <div class="stat-cell">{{ $row['team'] }}</div>
+                            <div class="stat-cell value">{{ $row['wins'] }}</div>
+                        </div>
                     @endforeach
-                    </tbody>
-                </table>
+                </div>
             </div>
             @endif
 
@@ -100,36 +119,23 @@
                 @if(empty($stats))
                     <p class="muted">Нет данных для сводной таблицы.</p>
                 @else
-                <table class="responsive-table">
-                    <thead>
-                        <tr>
-                            <th>Команда</th>
-                            <th>Матчи</th>
-                            <th>Забитые</th>
-                            <th>Пропущенные</th>
-                            <th>Победы</th>
-                            <th>Ничьи</th>
-                            <th>Поражения</th>
-                            <th>Дома (З/П)</th>
-                            <th>В гостях (З/П)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($stats as $team => $st)
-                            <tr>
-                                <td>{{ $team }}</td>
-                                <td>{{ $st['matches'] }}</td>
-                                <td>{{ $st['goals_for'] }}</td>
-                                <td>{{ $st['goals_against'] }}</td>
-                                <td>{{ $st['wins'] }}</td>
-                                <td>{{ $st['draws'] }}</td>
-                                <td>{{ $st['losses'] }}</td>
-                                <td>{{ $st['home']['goals_for'] }} / {{ $st['home']['goals_against'] }}</td>
-                                <td>{{ $st['away']['goals_for'] }} / {{ $st['away']['goals_against'] }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                <div class="rcards">
+                    @foreach($stats as $team => $st)
+                        <div class="team-stat">
+                            <div class="team-name">{{ $team }}</div>
+                            <div class="stat-tags">
+                                <div class="stat-tag"><span class="label">Матчи</span><span class="value">{{ $st['matches'] }}</span></div>
+                                <div class="stat-tag"><span class="label">Забитые</span><span class="value">{{ $st['goals_for'] }}</span></div>
+                                <div class="stat-tag"><span class="label">Пропущенные</span><span class="value">{{ $st['goals_against'] }}</span></div>
+                                <div class="stat-tag"><span class="label">Победы</span><span class="value">{{ $st['wins'] }}</span></div>
+                                <div class="stat-tag"><span class="label">Ничьи</span><span class="value">{{ $st['draws'] }}</span></div>
+                                <div class="stat-tag"><span class="label">Поражения</span><span class="value">{{ $st['losses'] }}</span></div>
+                                <div class="stat-tag"><span class="label">Дома</span><span class="value">{{ $st['home']['goals_for'] }} / {{ $st['home']['goals_against'] }}</span></div>
+                                <div class="stat-tag"><span class="label">В гостях</span><span class="value">{{ $st['away']['goals_for'] }} / {{ $st['away']['goals_against'] }}</span></div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
                 @endif
             </div>
 
