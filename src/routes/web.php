@@ -8,12 +8,11 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
-use App\Http\Controllers\SstatsDebugController;
+use App\Http\Controllers\OddsController;
 
 Route::get('/', [BetController::class, 'index'])->name('home');
-// Public debug API endpoint for homepage auto-refresh panel
-Route::get('/debug/api', [SstatsDebugController::class, 'api'])->name('debug.api');
-Route::get('/debug/odds', [SstatsDebugController::class, 'odds'])->name('debug.odds');
+// Public odds endpoint for homepage auto-refresh panel
+Route::get('/odds', [OddsController::class, 'odds'])->name('odds.index');
 
 // Страница документации: авторизация по переменной окружения DOCS_AUTH_MODE
 // test — публично; prod — только админ (AdminOnly)
@@ -24,7 +23,7 @@ if (env('DOCS_AUTH_MODE', 'prod') === 'prod') {
 Route::post('/bets', [BetController::class, 'store'])->name('bets.store');
 Route::post('/events/{event}/settle', [BetController::class, 'settle'])->name('events.settle');
 Route::get('/events/sync-results', [BetController::class, 'syncResults'])->name('events.sync');
-// Debug page removed per request
+// Page removed per request
 
 // sstats.net explorer
 Route::get('/sstats', [SstatsController::class, 'index'])->name('sstats.index')->middleware('auth');

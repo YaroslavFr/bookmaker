@@ -6,10 +6,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use App\Models\Event;
 
-class SstatsDebugController extends Controller
+class OddsController extends Controller
 {
     /**
-     * Public JSON endpoint returning live sstats EPL finished games debug info.
+     * Public JSON endpoint returning sstats EPL finished games info.
      */
     public function api(Request $request)
     {

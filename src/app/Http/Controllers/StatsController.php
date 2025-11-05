@@ -24,8 +24,8 @@ class StatsController extends Controller
 
             $headers = ['X-API-KEY' => $apiKey, 'Accept' => 'application/json'];
             $year = (int) ($request->query('year') ?? 2025);
-            // По умолчанию отключаем кеш, чтобы страница /stats работала без параметров
-            $nocache = filter_var($request->query('nocache', 'true'), FILTER_VALIDATE_BOOLEAN);
+            // Включаем кеш по умолчанию; можно отключить через ?nocache=true
+            $nocache = filter_var($request->query('nocache', 'false'), FILTER_VALIDATE_BOOLEAN);
 
             // Лиги для отображения: EPL плюс запрошенные
             $leagueNames = [
@@ -232,7 +232,7 @@ class StatsController extends Controller
             $leagues = [];
             foreach ($idsToProcess as $lid) {
                 $cacheKey = 'sstats:results_all:league:' . $lid . ':year:' . $year . ':days120';
-                $resultsAll = $nocache ? $fetch($lid) : Cache::remember($cacheKey, 12*60*60, fn() => $fetch($lid));
+                $resultsAll = $nocache ? $fetch($lid) : Cache::remember($cacheKey, 24*60*60, fn() => $fetch($lid));
                 [$teamStats, $aggregates] = $compute($resultsAll);
                 $leagues[] = [
                     'id' => $lid,

@@ -19,6 +19,9 @@ class Kernel extends ConsoleKernel
             // Optional: odds sync daily
             $schedule->command('epl:sync-odds --limit=10')->dailyAt('06:00');
         }
+
+        // Daily refresh for stats cache
+        $schedule->command('stats:refresh')->dailyAt('03:30');
     }
 
     /**

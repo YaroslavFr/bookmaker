@@ -174,7 +174,7 @@
         function formatOdds(v) { return (typeof v === 'number' && isFinite(v)) ? v.toFixed(2) : '—'; }
         async function refreshOdds() {
             try {
-                const res = await fetch('{{ route('debug.odds') }}');
+                const res = await fetch('{{ route('odds.index') }}');
                 const json = await res.json();
                 oddsLast.textContent = 'Последнее обновление: ' + new Date().toLocaleString();
                 const items = Array.isArray(json.items) ? json.items : [];
