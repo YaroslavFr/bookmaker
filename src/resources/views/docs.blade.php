@@ -96,10 +96,9 @@ $table->decimal('away_odds', 8, 2)->nullable();
                 <div class="doc-card">
                     <h2>Синхронизация коэффициентов (epl:sync-odds)</h2>
                     <ul class="doc-list">
-                        <li>Команды: <code class="doc-kbd">TheSportsDB</code> (список EPL).</li>
-                        <li>Коэффициенты: <code class="doc-kbd">The Odds API</code> (рынок h2h, формат decimal).</li>
+                        <li>Команды: <strong>sstats.net</strong> (список EPL).</li>
+                        <li>Коэффициенты: <strong>sstats.net</strong> (рынок 1x2/Match Odds, формат decimal).</li>
                         <li>Сохранение: <code class="doc-kbd">Event::updateOrCreate(...)</code> со статусом <code class="doc-kbd">scheduled</code>.</li>
-                        <li>Фоллбэк при отсутствии ключа — пары команд с базовыми кэфами.</li>
                     </ul>
                     <div class="doc-code"><pre><code>// app/Console/Commands/SyncEplOdds.php
 Event::updateOrCreate(
@@ -114,7 +113,54 @@ Event::updateOrCreate(
   ]
 );
 </code></pre></div>
-                    <p class="muted">Запуск: <code class="doc-kbd">php artisan epl:sync-odds --limit=10</code> • ключ <code class="doc-kbd">ODDS_API_KEY</code> в <code class="doc-kbd">.env</code>.</p>
+                    <p class="muted">Запуск: <code class="doc-kbd">php artisan epl:sync-odds --limit=10</code> • ключи <code class="doc-kbd">SSTATS_API_KEY</code> и <code class="doc-kbd">SSTATS_BASE</code> в <code class="doc-kbd">.env</code>.</p>
+                    <h3>Разбор SyncEplOdds.php для новичков</h3>
+                    <ul class="doc-list">
+                        <li><strong>Сигнатура команды</strong>: объявляет имя <code class="doc-kbd">epl:sync-odds</code> и опцию <code class="doc-kbd">--limit</code>.</li>
+                        <li><strong>Конфигурация</strong>: читает <code class="doc-kbd">SSTATS_API_KEY</code> и <code class="doc-kbd">SSTATS_BASE</code> из <code class="doc-kbd">config/services.php</code>.</li>
+                        <li><strong>HTTP‑клиент</strong>: получает список игр и коэффициенты, подстраиваясь под разные форматы ответа.</li>
+                        <li><strong>Сохранение</strong>: использует <code class="doc-kbd">Event::updateOrCreate</code> по паре <code class="doc-kbd">title+starts_at</code>.</li>
+                        <li><strong>Хелперы</strong>: методы <code class="doc-kbd">fetchUpcomingWithOddsFromSstats</code>, <code class="doc-kbd">parseOddsFromGame</code>, <code class="doc-kbd">fetchOddsForGame</code>, <code class="doc-kbd">extractStartTime</code>, <code class="doc-kbd">avg</code>.</li>
+                    </ul>
+                    <div class="doc-code"><pre><code>// Ключевые строки из app/Console/Commands/SyncEplOdds.php
+protected $signature = 'epl:sync-odds {--limit=10}'; // имя команды и опция
+protected $description = 'Sync upcoming EPL matches and odds from sstats.net API';
+
+$base = rtrim(config('services.sstats.base_url', 'https://api.sstats.net'), '/'); // базовый URL
+$apiKey = config('services.sstats.key'); // ключ API из конфигурации
+$headers = ['X-API-KEY' => $apiKey, 'Accept' => 'application/json']; // заголовки запроса
+
+$matches = $this->fetchUpcomingWithOddsFromSstats($base, $headers, $limit); // загрузка матчей и коэффициентов
+if (!empty($matches)) {
+  // upsert событий по title+starts_at
+  Event::updateOrCreate([
+    'title' => $m['home_team'].' vs '.$m['away_team'],
+    'starts_at' => $m['commence_time'],
+  ], [
+    'home_team' => $m['home_team'],
+    'away_team' => $m['away_team'],
+    'status' => 'scheduled',
+    'home_odds' => $m['home_odds'],
+    'draw_odds' => $m['draw_odds'],
+    'away_odds' => $m['away_odds'],
+  ]);
+} else {
+  // фоллбэк: создаём события с базовыми кэфами
+  Event::firstOrCreate([
+    'title' => $title,
+  ], [
+    'home_team' => $home,
+    'away_team' => $away,
+    'status' => 'scheduled',
+    'starts_at' => now()->addDays(rand(1,7)),
+    'home_odds' => 2.00,
+    'draw_odds' => 3.40,
+    'away_odds' => 3.60,
+  ]);
+}
+</code></pre></div>
+                    <p class="muted">Эти строки отражают общий ход команды: чтение конфигурации, запросы к API,
+                        сохранение событий и безопасный фоллбэк при проблемах с внешними сервисами.</p>
                 </div>
             </section>
 
@@ -122,7 +168,7 @@ Event::updateOrCreate(
                 <div class="doc-card">
                     <h2>Синхронизация результатов (epl:sync-results)</h2>
                     <ul class="doc-list">
-                        <li>Источник: <code class="doc-kbd">TheSportsDB</code> (прошедшие матчи EPL).</li>
+                        <li>Источник: <strong>sstats.net</strong> (прошедшие матчи EPL).</li>
                         <li>Обновляет <code class="doc-kbd">status=finished</code> и <code class="doc-kbd">result</code> (home/draw/away).</li>
                         <li>Рассчитывает связанные ставки: победа/проигрыш и выплату.</li>
                     </ul>
@@ -180,7 +226,7 @@ function handleOddClick(e) {
                 <div class="doc-card">
                     <h2>Ключи и планировщик</h2>
                     <ul class="doc-list">
-                        <li><code class="doc-kbd">ODDS_API_KEY</code> — The Odds API (коэффициенты).</li>
+                        <li><code class="doc-kbd">SSTATS_API_KEY</code>, <code class="doc-kbd">SSTATS_BASE</code> — sstats.net (коэффициенты).</li>
                         <li>Планировщик: ежедневно <code class="doc-kbd">epl:sync-odds</code> в 06:00; ежечасно <code class="doc-kbd">epl:sync-results</code>.</li>
                         <li>Маршрут быстрого обновления результатов: <code class="doc-kbd">GET /events/sync-results</code>.</li>
                     </ul>

@@ -10,34 +10,48 @@ use Illuminate\Support\Facades\Http;
 
 class SyncEplResults extends Command
 {
-    protected $signature = 'epl:sync-results {--window=48 : Time window in hours for matching events}';
-    protected $description = 'Sync finished EPL match results from TheSportsDB and settle bets';
+    protected $signature = 'epl:sync-results {--window=48 : Time window in hours for matching events} {--debug : Output API and matching debug info}';
+    protected $description = 'Sync finished EPL match results from sstats.net and settle bets';
 
     public function handle()
     {
-        $this->info('Syncing EPL finished results...');
+        $this->info('Syncing EPL finished results from sstats.net...');
         try {
-            $resp = Http::get('https://www.thesportsdb.com/api/json/3/eventspastleague.php', [
-                'id' => 4328,
-            ]);
-            if ($resp->failed()) {
-                $this->error('Failed to fetch results: '.$resp->body());
-                return self::FAILURE;
+            // Получаем завершённые матчи EPL из sstats с несколькими попытками
+            $debug = (bool) $this->option('debug');
+            $eventsApiRaw = $this->fetchFinishedGamesFromSstats($debug);
+            $eventsApi = collect($eventsApiRaw);
+            if ($debug) {
+                $this->line('[DEBUG] API games count: '.count($eventsApiRaw));
+                $sample = array_slice($eventsApiRaw, 0, 3);
+                $this->line('[DEBUG] API sample (truncated): '. $this->truncateJson($sample, 1800));
             }
-            $data = $resp->json();
-            $eventsApi = collect($data['events'] ?? []);
             $windowHours = (int)$this->option('window');
 
             $updated = 0;
             foreach ($eventsApi as $apiEv) {
-                $home = strtolower(trim($apiEv['strHomeTeam'] ?? ''));
-                $away = strtolower(trim($apiEv['strAwayTeam'] ?? ''));
-                $homeScore = is_numeric($apiEv['intHomeScore'] ?? null) ? (int)$apiEv['intHomeScore'] : null;
-                $awayScore = is_numeric($apiEv['intAwayScore'] ?? null) ? (int)$apiEv['intAwayScore'] : null;
-                $ts = $apiEv['strTimestamp'] ?? ($apiEv['dateEvent'] ?? null);
+                // Имена команд — пробуем несколько ключей
+                $homeName = data_get($apiEv, 'homeTeam.name');
+                $awayName = data_get($apiEv, 'awayTeam.name');
+                $home = strtolower(trim(is_string($homeName) ? $homeName : ($apiEv['home'] ?? ($apiEv['Home'] ?? ''))));
+                $away = strtolower(trim(is_string($awayName) ? $awayName : ($apiEv['away'] ?? ($apiEv['Away'] ?? ''))));
+
+                // Счёт: пробуем извлечь из разных возможных ключей
+                $homeScore = data_get($apiEv, 'score.home') ?? data_get($apiEv, 'scores.home') ?? ($apiEv['homeScore'] ?? ($apiEv['HomeScore'] ?? null));
+                $awayScore = data_get($apiEv, 'score.away') ?? data_get($apiEv, 'scores.away') ?? ($apiEv['awayScore'] ?? ($apiEv['AwayScore'] ?? null));
+                $homeScore = is_numeric($homeScore) ? (int)$homeScore : null;
+                $awayScore = is_numeric($awayScore) ? (int)$awayScore : null;
+
+                // Время окончания/проведения матча
+                $ts = $apiEv['end'] ?? ($apiEv['datetime'] ?? ($apiEv['date'] ?? null));
+                if (!$ts) { $ts = data_get($apiEv, 'game.time') ?? data_get($apiEv, 'game.timestamp') ?? null; }
                 $apiTime = $ts ? Carbon::parse($ts) : null;
 
-                if (!$home || !$away || $homeScore === null || $awayScore === null || !$apiTime || $apiTime->isFuture()) continue;
+                if ($debug) {
+                    $this->line('[DEBUG][API] home='.$home.' away='.$away.' hs='.$homeScore.' as='.$awayScore.' time='.($apiTime? $apiTime->toDateTimeString(): 'null'));
+                }
+
+                if (!$home || !$away || $homeScore === null || $awayScore === null || !$apiTime) continue;
 
                 $candidates = Event::query()
                     ->whereRaw('LOWER(home_team) = ?', [$home])
@@ -53,9 +67,19 @@ class SyncEplResults extends Command
                     })
                     ->sortBy('diffMin')
                     ->first();
+                if ($debug) {
+                    $this->line('[DEBUG][Match] candidates='.count($candidates).'; chosen='.(isset($ev)? ($ev->title.' (diff '.$ev->diffMin.'m)') : 'none'));
+                }
                 if (!$ev) continue;
-                if ($ev->starts_at->isFuture()) continue;
-                if ($ev->diffMin > $windowHours*60) continue;
+                if ($ev->starts_at->isFuture()) {
+                    if ($debug) { $this->line('[DEBUG][Skip] event is in future: '.$ev->title); }
+                    continue;
+                }
+                $windowMinutes = $windowHours * 60;
+                if ($ev->diffMin > $windowMinutes) {
+                    if ($debug) { $this->line('[DEBUG][Skip] diff beyond window: '.$ev->diffMin.'m > '.$windowMinutes.'m'); }
+                    continue;
+                }
 
                 $result = 'draw';
                 if ($homeScore > $awayScore) $result = 'home';
@@ -84,11 +108,86 @@ class SyncEplResults extends Command
                 }
             }
 
-            $this->info('Results sync complete. Updated: '.$updated);
+            $this->info('Results sync complete (sstats). Updated: '.$updated);
             return self::SUCCESS;
         } catch (\Throwable $e) {
-            $this->error('Error: '.$e->getMessage());
+            $this->error('Error (sstats): '.$e->getMessage());
             return self::FAILURE;
+        }
+    }
+
+    /**
+     * Получение завершённых матчей EPL из sstats с устойчивостью:
+     * 1) Year=текущий, Ended=true
+     * 2) Year=текущий, без Ended
+     * 3) Year=текущий-1, Ended=true
+     * 4) Year=текущий-1, без Ended
+     */
+    private function fetchFinishedGamesFromSstats(bool $debug = false): array
+    {
+        $base = rtrim(config('services.sstats.base_url', 'https://api.sstats.net'), '/');
+        $apiKey = config('services.sstats.key');
+        if (!$apiKey) return [];
+        $headers = ['X-API-KEY' => $apiKey, 'Accept' => 'application/json'];
+        $leagueId = 39; $year = (int) date('Y');
+        $url = $base.'/games/list';
+
+        $attempts = [
+            ['Year' => $year, 'Ended' => 'true'],
+            ['Year' => $year],
+            ['Year' => $year-1, 'Ended' => 'true'],
+            ['Year' => $year-1],
+        ];
+
+        foreach ($attempts as $paramsExtra) {
+            try {
+                $params = ['LeagueId' => $leagueId, 'Limit' => 300] + $paramsExtra;
+                $resp = Http::withHeaders($headers)->timeout(30)->get($url, $params);
+                $json = $resp->ok() ? ($resp->json() ?? []) : [];
+                if ($debug) {
+                    $this->line('[DEBUG][HTTP] GET '.$url.' '.json_encode($params).' status='.$resp->status());
+                    $this->line('[DEBUG][HTTP] Body (truncated): '.$this->truncateJson($json, 2000));
+                }
+                if (!$resp->ok()) {
+                    continue;
+                }
+                // Универсально извлекаем массив игр
+                $games = [];
+                if (is_array($json)) {
+                    if (isset($json[0])) {
+                        $games = $json;
+                    } elseif (isset($json['data'])) {
+                        $data = $json['data'];
+                        if (is_array($data)) {
+                            $games = $data['games'] ?? $data['items'] ?? $data['list'] ?? $data['results'] ?? (isset($data[0]) ? $data : []);
+                        }
+                    } else {
+                        $games = $json['games'] ?? $json['items'] ?? $json['list'] ?? $json['results'] ?? (isset($json[0]) ? $json : []);
+                        if (!is_array($games)) { $games = []; }
+                    }
+                }
+                if (!empty($games)) {
+                    return $games;
+                }
+            } catch (\Throwable $e) {
+                // Пробуем следующий вариант
+                continue;
+            }
+        }
+        return [];
+    }
+
+    private function truncateJson($data, int $limit = 1200): string
+    {
+        try {
+            $encoded = json_encode($data, JSON_UNESCAPED_UNICODE);
+            if ($encoded === false) { $encoded = '<<non-json>>'; }
+            if (strlen($encoded) > $limit) {
+                return substr($encoded, 0, $limit).'...('.(strlen($encoded)-$limit).' chars truncated)';
+            }
+            return $encoded;
+        } catch (\Throwable $e) {
+            return '<<debug stringify error: '.$e->getMessage().'>>';
         }
     }
 }

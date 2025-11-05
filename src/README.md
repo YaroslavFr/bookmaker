@@ -109,10 +109,10 @@ $table->decimal('away_odds', 8, 2)->nullable();
 
 ### Откуда появляются записи и коэффициенты
 - Команда `epl:sync-odds` наполняет предстоящие матчи и коэффициенты.
-  - Источник команд: `TheSportsDB` (список команд лиги EPL).
-  - Источник коэффициентов: `The Odds API` (рынок `h2h`, формат `decimal`).
+  - Источник команд: **sstats.net** (список команд лиги EPL).
+  - Источник коэффициентов: **sstats.net** (рынок `1x2/Match Odds`, формат `decimal`).
   - Данные сохраняются в `events` через `updateOrCreate` (если матч уже есть — обновление, иначе — создание).
-  - Если ключ к Odds API не задан, создаются пары команд с дефолтными коэффициентами как фоллбэк.
+  - При недоступности API события не создаются (фоллбэк отключён).
 
 ```php
 // app/Console/Commands/SyncEplOdds.php
@@ -130,7 +130,7 @@ Event::updateOrCreate(
 ```
 
 - Где брать ключи и как запускать:
-  - Установите `ODDS_API_KEY` в `.env` или `config/services.php` (`services.odds_api.key`).
+  - Установите `SSTATS_API_KEY` и при необходимости `SSTATS_BASE` в `.env` (`services.sstats.*`).
   - Запуск вручную: `php artisan epl:sync-odds --limit=10`.
   - Планировщик (`app/Console/Kernel.php`) вызывает `epl:sync-odds` ежедневно в `06:00`.
 

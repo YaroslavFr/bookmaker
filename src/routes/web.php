@@ -8,8 +8,12 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
+use App\Http\Controllers\SstatsDebugController;
 
 Route::get('/', [BetController::class, 'index'])->name('home');
+// Public debug API endpoint for homepage auto-refresh panel
+Route::get('/debug/api', [SstatsDebugController::class, 'api'])->name('debug.api');
+Route::get('/debug/odds', [SstatsDebugController::class, 'odds'])->name('debug.odds');
 
 // Страница документации: авторизация по переменной окружения DOCS_AUTH_MODE
 // test — публично; prod — только админ (AdminOnly)

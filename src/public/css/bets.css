@@ -50,7 +50,9 @@ body {
   width: calc(100% - 40px);
   padding: 0 20px;
 }
-
+main{
+  padding-bottom:50px;
+}
 .grid {
   display: grid;
   gap: 20px;
@@ -177,7 +179,8 @@ td {
 }
 
 .odd-btn {
-  padding: 6px 10px;
+  font-size: 13px;
+  padding: 2px 5px;
   font-weight: 600;
   border-radius: 9999px;
   border-color: transparent;

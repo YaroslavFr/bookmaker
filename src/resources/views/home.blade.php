@@ -13,6 +13,12 @@
     @endif
     
     <style>
+        .line tr:last-child td{
+            border-bottom:0;
+        }
+        .line td{
+            padding:3px 2px;
+        }
         .muted { color: #6b7280; font-size: 12px; }
         .wrap { word-break: break-word; }
         .collapsible .collapse-toggle { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 14px; padding: 6px 10px; }
@@ -20,6 +26,10 @@
         .collapsible.is-collapsed .collapsible-body { display: none; }
         .row-between { display: flex; align-items: center; justify-content: space-between; }
         .card-header { margin-bottom: 8px; }
+        .teams-row {font-size: 14px; display: inline-flex; align-items: center; gap: 10px; }
+        .team-name { font-weight: 600; }
+        .vs-sep { color: #6b7280; }
+        .event-sub { margin-top: 4px; font-size: 12px; color: #6b7280; }
     </style>
     </head>
 <body>
@@ -36,7 +46,7 @@
                 @if(empty($events))
                     <p class="muted">Нет событий.</p>
                 @else
-                    <table class="responsive-table">
+                    <table class="responsive-table line">
                         <thead>
                             <tr>
                                 <th>Матч</th>
@@ -50,12 +60,17 @@
                                 <tr>
                                     <td data-label="Матч">
                                         @if(!empty($ev->home_team) && !empty($ev->away_team))
-                                            <span class="teams-title">{{ $ev->home_team }} vs {{ $ev->away_team }}</span>
+                                            <div class="teams-row">
+                                                <span class="team-name">{{ $ev->home_team }}</span>
+                                                <span class="vs-sep">vs</span>
+                                                <span class="team-name">{{ $ev->away_team }}</span>
+                                            </div>
                                         @else
                                             <b>{{ $ev->title ?? ('Event #'.$ev->id) }}</b>
                                         @endif
+                                        
                                     </td>
-                                    <td data-label="Дата/время">
+                                    <td class="text-sm muted" data-label="Дата/время">
                                         {{ $ev->starts_at ? $ev->starts_at->format('d.m.Y H:i') : '—' }}
                                     </td>
                                     <td data-label="Коэфф. (Д/Н/Г)">
@@ -76,7 +91,7 @@
                                             —
                                         @endif
                                     </td>
-                                    <td data-label="Статус">{{ $ev->status ?? '—' }}</td>
+                                    <td class="text-sm muted {{ $ev->status === 'scheduled' ? 'muted' : 'text-green-500' }}" data-label="Статус">{{ $ev->status ?? '—' }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
@@ -116,19 +131,27 @@
                             <tr>
                                 <td>{{ $coupon->id }}</td>
                                 <td>{{ $coupon->bettor_name }}</td>
-                                <td>
+                                    <td>
                                     @foreach($coupon->bets as $l)
-                                        <div>
+                                        @php($selMap = ['home' => 'П1', 'draw' => 'Ничья', 'away' => 'П2'])
+                                        @php($placedOdds = $l->event ? (match($l->selection){
+                                            'home' => $l->event->home_odds,
+                                            'draw' => $l->event->draw_odds,
+                                            'away' => $l->event->away_odds,
+                                        }) : null)
+                                        <div class="mb-2 text-sm">
                                             @if($l->event && $l->event->home_team && $l->event->away_team)
                                                 {{ $l->event->home_team }} vs {{ $l->event->away_team }}
                                             @else
                                                 {{ $l->event->title ?? ('Event #'.$l->event_id) }}
                                             @endif
-                                            @php($selMap = ['home' => 'П1', 'draw' => 'Ничья', 'away' => 'П2'])
-                                            — выбор: {{ $selMap[$l->selection] ?? strtoupper($l->selection) }}
+                                            — {{ $selMap[$l->selection] ?? strtoupper($l->selection) }}
+                                            @if($placedOdds)
+                                                <span class="muted">(кэф.: {{ number_format($placedOdds, 2) }})</span>
+                                            @endif
                                         </div>
                                     @endforeach
-                                </td>
+                                    </td>
                                 <td>{{ $coupon->amount_demo ? number_format($coupon->amount_demo, 2) : '—' }}</td>
                                 <td>{{ $coupon->total_odds ? number_format($coupon->total_odds, 2) : '—' }}</td>
                                 @php($potential = ($coupon->total_odds && $coupon->amount_demo) ? ($coupon->amount_demo * $coupon->total_odds) : null)
@@ -146,6 +169,45 @@
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+        const oddsBody = document.getElementById('odds-body');
+        const oddsLast = document.getElementById('odds-last');
+        function formatOdds(v) { return (typeof v === 'number' && isFinite(v)) ? v.toFixed(2) : '—'; }
+        async function refreshOdds() {
+            try {
+                const res = await fetch('{{ route('debug.odds') }}');
+                const json = await res.json();
+                oddsLast.textContent = 'Последнее обновление: ' + new Date().toLocaleString();
+                const items = Array.isArray(json.items) ? json.items : [];
+                if (!items.length) {
+                    oddsBody.innerHTML = '<tr><td colspan="3" class="muted">Нет данных от API</td></tr>';
+                    return;
+                }
+                oddsBody.innerHTML = items.map(it => {
+                    const h = formatOdds(it.home_odds);
+                    const d = formatOdds(it.draw_odds);
+                    const a = formatOdds(it.away_odds);
+                    const dt = it.commence_time ? new Date(it.commence_time).toLocaleString() : '—';
+                    const title = `${it.home_team ?? ''} vs ${it.away_team ?? ''}`;
+                    const oddsHtml = (it.event_id)
+                        ? `<div class="odd-group">
+                               <span class="odd-btn odd-btn--home" data-event-id="${it.event_id}" data-selection="home" data-home="${it.home_team ?? ''}" data-away="${it.away_team ?? ''}" data-odds="${h}">П1 ${h}</span>
+                               <span class="odd-btn odd-btn--draw" data-event-id="${it.event_id}" data-selection="draw" data-home="${it.home_team ?? ''}" data-away="${it.away_team ?? ''}" data-odds="${d}">Ничья ${d}</span>
+                               <span class="odd-btn odd-btn--away" data-event-id="${it.event_id}" data-selection="away" data-home="${it.home_team ?? ''}" data-away="${it.away_team ?? ''}" data-odds="${a}">П2 ${a}</span>
+                           </div>`
+                        : `${h} / ${d} / ${a}`;
+                    return `<tr>
+                        <td>${title}</td>
+                        <td>${dt}</td>
+                        <td>${oddsHtml}</td>
+                    </tr>`;
+                }).join('');
+            } catch (e) {
+                oddsBody.innerHTML = `<tr><td colspan="3" class="muted">Ошибка API: ${e && e.message ? e.message : String(e)}</td></tr>`;
+            }
+        }
+        refreshOdds();
+        setInterval(refreshOdds, 60000); // refresh every 60s
+
         document.querySelectorAll('.collapsible .collapse-toggle').forEach(function(btn) {
             btn.addEventListener('click', function() {
                 var wrap = btn.closest('.collapsible');

@@ -12,11 +12,13 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // Sync EPL results every 10 minutes
-        $schedule->command('epl:sync-results')->everyTenMinutes();
-
-        // Optional: odds sync daily
-        $schedule->command('epl:sync-odds --limit=10')->dailyAt('06:00');
+        // Toggle sync via env SYNC_ENABLED (default: disabled for temporary pause)
+        if (env('SYNC_ENABLED', false)) {
+            // Sync EPL results every 10 minutes
+            $schedule->command('epl:sync-results')->everyTenMinutes();
+            // Optional: odds sync daily
+            $schedule->command('epl:sync-odds --limit=10')->dailyAt('06:00');
+        }
     }
 
     /**
