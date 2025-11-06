@@ -40,65 +40,26 @@
                 <h1 class="text-2xl font-bold mt-6 mb-6">Линия событий</h1>
             </div>
             <div id="mainrow" class="grid grid-cols-1 md:grid-cols-[7fr_3fr] gap-4">
-            <div class="card mt-20">
-                <h2 class="font-bold">События</h2>
-                @php($events = $events ?? [])
-                @if(empty($events))
-                    <p class="muted">Нет событий.</p>
-                @else
-                    <table class="responsive-table line">
-                        <thead>
-                            <tr>
-                                <th>Матч</th>
-                                <th>Дата/время</th>
-                                <th>Коэфф. (П1 / Ничья / П2)</th>
-                                <th>Статус</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($events as $ev)
-                                <tr>
-                                    <td data-label="Матч">
-                                        @if(!empty($ev->home_team) && !empty($ev->away_team))
-                                            <div class="teams-row">
-                                                <span class="team-name">{{ $ev->home_team }}</span>
-                                                <span class="vs-sep">vs</span>
-                                                <span class="team-name">{{ $ev->away_team }}</span>
-                                            </div>
-                                        @else
-                                            <b>{{ $ev->title ?? ('Event #'.$ev->id) }}</b>
-                                        @endif
-                                        
-                                    </td>
-                                    <td class="text-sm muted" data-label="Дата/время">
-                                        {{ $ev->starts_at ? $ev->starts_at->format('d.m.Y H:i') : '—' }}
-                                    </td>
-                                    <td data-label="Коэфф. (Д/Н/Г)">
-                                        @php($h = $ev->home_odds)
-                                        @php($d = $ev->draw_odds)
-                                        @php($a = $ev->away_odds)
-                                        @if($h && $d && $a)
-                                            @if(($ev->status ?? 'scheduled') === 'scheduled')
-                                                <div class="odd-group">
-                                                    <span class="odd-btn odd-btn--home" data-event-id="{{ $ev->id }}" data-selection="home" data-home="{{ $ev->home_team ?? '' }}" data-away="{{ $ev->away_team ?? '' }}" data-odds="{{ number_format($h, 2) }}">П1 {{ number_format($h, 2) }}</span>
-                                                    <span class="odd-btn odd-btn--draw" data-event-id="{{ $ev->id }}" data-selection="draw" data-home="{{ $ev->home_team ?? '' }}" data-away="{{ $ev->away_team ?? '' }}" data-odds="{{ number_format($d, 2) }}">Ничья {{ number_format($d, 2) }}</span>
-                                                    <span class="odd-btn odd-btn--away" data-event-id="{{ $ev->id }}" data-selection="away" data-home="{{ $ev->home_team ?? '' }}" data-away="{{ $ev->away_team ?? '' }}" data-odds="{{ number_format($a, 2) }}">П2 {{ number_format($a, 2) }}</span>
-                                                </div>
-                                            @else
-                                                {{ number_format($h, 2) }} / {{ number_format($d, 2) }} / {{ number_format($a, 2) }}
-                                            @endif
-                                        @else
-                                            —
-                                        @endif
-                                    </td>
-                                    <td class="text-sm muted {{ $ev->status === 'scheduled' ? 'muted' : 'text-green-500' }}" data-label="Статус">{{ $ev->status ?? '—' }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                @endif
-            </div>
+                <div>
+                @php(
+                    $leagues = isset($leagues) && is_array($leagues) ? $leagues : [
+                        ['title' => 'Чемпионат Англии (EPL)', 'events' => ($eventsEpl ?? [])],
+                        ['title' => 'Лига чемпионов (UCL)', 'events' => ($eventsUcl ?? [])],
+                        ['title' => 'Серия А (ITA)', 'events' => ($eventsIta ?? [])],
+                    ]
+                )
 
+                @foreach($leagues as $league)
+                    @php($events = $league['events'] ?? [])
+                    @if(count($events))
+                        @include('partials.league-card', [
+                            'title' => ($league['title'] ?? 'Лига'),
+                            'events' => $events,
+                            'first' => $loop->first,
+                        ])
+                    @endif
+                @endforeach
+                </div>
             <div class="card mt-20">
                 <div id="vue-app"
                      data-csrf="{{ csrf_token() }}"
@@ -147,7 +108,7 @@
                                             @endif
                                             — {{ $selMap[$l->selection] ?? strtoupper($l->selection) }}
                                             @if($placedOdds)
-                                                <span class="muted">(кэф.: {{ number_format($placedOdds, 2) }})</span>
+                                                <span class="muted">(кэф.: <span class="text-orange-400 text-base">{{ number_format($placedOdds, 2) }}</span>)</span>
                                             @endif
                                         </div>
                                     @endforeach

@@ -48,6 +48,7 @@ return [
     'sstats' => [
         'base_url' => env('SSTATS_BASE', 'https://api.sstats.net'),
         'key' => env('SSTATS_API_KEY'),
+        'champions_league_id' => env('SSTATS_CL_ID', 2),
     ],
 
 ];

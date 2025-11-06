@@ -9,39 +9,78 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
 
 class BetController extends Controller
 {
     public function index()
     {
         // Перед рендером обновим события и коэффициенты из sstats (минимум запросов, без кэша)
-        $this->refreshUpcomingEvents();
+        $this->refreshUpcomingEventsForLeague(39, 'EPL'); // Чемпионат Англии
+        $uclId = (int) (config('services.sstats.champions_league_id', 2));
+        $this->refreshUpcomingEventsForLeague($uclId, 'UCL'); // Лига чемпионов
+        $this->refreshUpcomingEventsForLeague(135, 'ITA'); // Серия А (Италия)
 
-        // Use explicit ordering by starts_at to avoid relying on created_at
-        $events = Event::with('bets')
-            ->orderByDesc('starts_at')
-            ->orderByDesc('id')
-            ->get();
+        // Получаем отдельные ленты событий: EPL, UCL, ITA
+        $hasCompetition = Schema::hasColumn('events', 'competition');
+        if ($hasCompetition) {
+            $eventsEpl = Event::with('bets')
+                ->where('competition', 'EPL')
+                ->orderByDesc('starts_at')
+                ->orderByDesc('id')
+                ->get();
+            $eventsUcl = Event::with('bets')
+                ->where('competition', 'UCL')
+                ->orderByDesc('starts_at')
+                ->orderByDesc('id')
+                ->get();
+            $eventsIta = Event::with('bets')
+                ->where('competition', 'ITA')
+                ->orderByDesc('starts_at')
+                ->orderByDesc('id')
+                ->get();
+        } else {
+            // Фоллбэк до применения миграции: показываем все события в секции EPL, а UCL — пусто.
+            $eventsEpl = Event::with('bets')
+                ->orderByDesc('starts_at')
+                ->orderByDesc('id')
+                ->get();
+            $eventsUcl = collect();
+            $eventsIta = collect();
+        }
         $coupons = Coupon::with(['bets.event'])->latest()->limit(50)->get();
 
-        return view('home', compact('events', 'coupons'));
+        // Структурируем лиги для универсального рендера во вьюхе
+        $leagues = [
+            ['title' => 'Чемпионат Англии (EPL)', 'events' => $eventsEpl],
+            ['title' => 'Лига чемпионов (UCL)', 'events' => $eventsUcl],
+            ['title' => 'Серия А (ITA)', 'events' => $eventsIta],
+        ];
+
+        return view('home', [
+            'leagues' => $leagues,
+            'eventsEpl' => $eventsEpl,
+            'eventsUcl' => $eventsUcl,
+            'eventsIta' => $eventsIta,
+            'coupons' => $coupons,
+        ]);
     }
 
     /**
      * Обновляет таблицу events свежими предматчевыми коэффициентами (1x2) из sstats.
      * Делает один запрос к /games/list (EPL, предстоящие), извлекает inline-коэффициенты.
      */
-    private function refreshUpcomingEvents(): void
+    private function refreshUpcomingEventsForLeague(int $leagueId, string $competition): void
     {
         try {
             $base = rtrim(config('services.sstats.base_url', 'https://api.sstats.net'), '/');
             $apiKey = config('services.sstats.key');
             if (!$apiKey) return; // Без ключа не обновляем
             $headers = ['X-API-KEY' => $apiKey, 'Accept' => 'application/json'];
-            $leagueId = 39; $year = (int) date('Y');
+            $year = (int) date('Y');
             $limit = 20; // небольшое ограничение для минимизации нагрузки
             // Сначала удалим все незакреплённые будущие события (без ставок), чтобы избежать наложений
-            Event::doesntHave('bets')->where('status', 'scheduled')->delete();
+            Event::doesntHave('bets')->where('status', 'scheduled')->where('competition', $competition)->delete();
 
             $resp = Http::withHeaders($headers)->timeout(8)->get($base.'/games/list', [
                 'LeagueId' => $leagueId,
@@ -95,6 +134,7 @@ class BetController extends Controller
                         'starts_at' => $dt,
                     ],
                     [
+                        'competition' => $competition,
                         'title' => $title,
                         'status' => 'scheduled',
                         'home_odds' => (float)$h,

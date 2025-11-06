@@ -15,13 +15,7 @@
     </style>
     </head>
 <body>
-    <header>
-        <div class="container">
-            <div class="logo">SPORT-KUCKOLD</div>
-            <div class="description">Сброс пароля</div>
-            @include('partials.nav')
-        </div>
-    </header>
+    @include('partials.header')
     <main>
         <div class="container">
             <div class="card login-wrap">
