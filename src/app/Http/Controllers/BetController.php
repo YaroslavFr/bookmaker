@@ -16,26 +16,9 @@ class BetController extends Controller
 {
     public function index()
     {
-        // Для каждой лиги делаем один запрос к /games/list: апсертим события и собираем доп. рынки
+        // Рендер полностью развязан от обновлений: только чтение из БД.
         $marketsMap = [];
         $gameIdsMap = [];
-        Debugbar::startMeasure('EPL_refresh', 'Refresh EPL markets');
-        $bundle = $this->refreshLeagueAndBuildMarketsMap(39, 'EPL');
-        $marketsMap = $marketsMap + ($bundle['markets'] ?? []);
-        $gameIdsMap = $gameIdsMap + ($bundle['gameIds'] ?? []);
-        Debugbar::stopMeasure('EPL_refresh');
-
-        Debugbar::startMeasure('UCL_refresh', 'Refresh UCL markets');
-        $bundle = $this->refreshLeagueAndBuildMarketsMap((int) (config('services.sstats.champions_league_id', 2)), 'UCL');
-        $marketsMap = $marketsMap + ($bundle['markets'] ?? []);
-        $gameIdsMap = $gameIdsMap + ($bundle['gameIds'] ?? []);
-        Debugbar::stopMeasure('UCL_refresh');
-
-        Debugbar::startMeasure('ITA_refresh', 'Refresh ITA markets');
-        $bundle = $this->refreshLeagueAndBuildMarketsMap(135, 'ITA');
-        $marketsMap = $marketsMap + ($bundle['markets'] ?? []);
-        $gameIdsMap = $gameIdsMap + ($bundle['gameIds'] ?? []);
-        Debugbar::stopMeasure('ITA_refresh');
 
         // Получаем отдельные ленты событий: EPL, UCL, ITA
         $hasCompetition = Schema::hasColumn('events', 'competition');
@@ -90,6 +73,15 @@ class BetController extends Controller
         $eventsUcl = $prepareForView($eventsUcl);
         $eventsIta = $prepareForView($eventsIta);
 
+        // Сформируем карту соответствий event_id -> external_id для ленивой загрузки рынков
+        foreach ([$eventsEpl, $eventsUcl, $eventsIta] as $collection) {
+            foreach ($collection as $ev) {
+                if (!empty($ev->external_id)) {
+                    $gameIdsMap[$ev->id] = (string)$ev->external_id;
+                }
+            }
+        }
+
         $coupons = Coupon::with(['bets.event'])->latest()->limit(50)->get();
 
         // Структурируем лиги для универсального рендера во вьюхе
@@ -137,153 +129,7 @@ class BetController extends Controller
         return [$home, $draw, $away];
     }
 
-    /**
-     * Один запрос к /games/list для лиги: создаёт/обновляет события и формирует карту доп. рынков.
-     * Возвращает marketsMap: [eventId => [ { name, selections: [{label, price}] } ] ]
-     */
-    private function refreshLeagueAndBuildMarketsMap(int $leagueId, string $competition): array
-    {
-        // Сначала пробуем вернуть готовый пакет из кеша, чтобы не выполнять апсёрты и парсинг на каждом рендере
-        $bundleKey = 'league:bundle:'.$leagueId.':'.date('Y');
-        if (Cache::has($bundleKey)) {
-            $cached = Cache::get($bundleKey);
-            if (is_array($cached) && isset($cached['markets']) && isset($cached['gameIds'])) {
-                return $cached;
-            }
-        }
-
-        $outMarkets = [];
-        $outGameIds = [];
-        try {
-            $base = rtrim(config('services.sstats.base_url', 'https://api.sstats.net'), '/');
-            $apiKey = config('services.sstats.key');
-            if (!$apiKey) return ['markets' => $outMarkets, 'gameIds' => $outGameIds];
-            $headers = ['X-API-KEY' => $apiKey, 'Accept' => 'application/json'];
-            $year = (int) date('Y');
-            $limit = 12;
-            $cacheKey = 'sstats:games:list:'.$leagueId.':'.$year.':status:2:limit:'.$limit;
-            Debugbar::startMeasure($competition.'_fetch', 'Fetch games list ('.$competition.')');
-            $games = Cache::remember($cacheKey, now()->addMinutes(20), function () use ($headers, $base, $leagueId, $year, $limit) {
-                $resp = Http::withHeaders($headers)->timeout(8)->get($base.'/games/list', [
-                    'LeagueId' => $leagueId,
-                    'Year' => $year,
-                    'Status' => 2,
-                    'Limit' => $limit,
-                ]);
-                if (!$resp->ok()) return [];
-                $json = $resp->json() ?? [];
-                $games = [];
-                if (is_array($json)) {
-                    if (isset($json[0])) {
-                        $games = $json;
-                    } elseif (isset($json['data'])) {
-                        $data = $json['data'];
-                        if (is_array($data)) {
-                            $games = $data['games'] ?? $data['items'] ?? $data['list'] ?? $data['results'] ?? (isset($data[0]) ? $data : []);
-                        }
-                    } else {
-                        $games = $json['games'] ?? $json['items'] ?? $json['list'] ?? $json['results'] ?? (isset($json[0]) ? $json : []);
-                        if (!is_array($games)) { $games = []; }
-                    }
-                }
-                return $games;
-            });
-            Debugbar::stopMeasure($competition.'_fetch');
-
-            $now = Carbon::now();
-            Debugbar::addMessage('Games fetched for '.$competition.': '.count($games));
-            foreach ($games as $g) {
-                // Названия команд (сырые, без канонизации)
-                $homeName = data_get($g, 'homeTeam.name') ?? data_get($g, 'home.name') ?? data_get($g, 'home') ?? data_get($g, 'Home');
-                $awayName = data_get($g, 'awayTeam.name') ?? data_get($g, 'away.name') ?? data_get($g, 'away') ?? data_get($g, 'Away');
-                if (!$homeName || !$awayName) continue;
-
-                // Внешний идентификатор игры (используется как ключ апсёрта)
-                $gameId = data_get($g, 'id') ?? data_get($g, 'game.id') ?? data_get($g, 'GameId') ?? data_get($g, 'gameid') ?? null;
-                if (!$gameId) continue;
-
-                $title = trim(((string)$homeName).' vs '.((string)$awayName));
-
-                // Дата/время
-                $dateRaw = data_get($g, 'date') ?? data_get($g, 'start') ?? data_get($g, 'datetime') ?? null;
-                $dt = null;
-                try { $dt = Carbon::parse($dateRaw ?: (data_get($g, 'dateUtc') ? '@'.data_get($g, 'dateUtc') : null)); } catch (\Throwable $e) {}
-                if (!$dt) continue;
-                $statusName = data_get($g, 'statusName') ?? data_get($g, 'status');
-                $isEnded = $statusName ? (stripos((string)$statusName, 'finish') !== false || stripos((string)$statusName, 'ended') !== false) : false;
-                if ($isEnded || $dt->lte($now)) continue;
-                // Нормализуем время старта (UTC, без секунд/микросекунд), чтобы ключи апсёрта были стабильны
-                try { $dt = $dt->copy()->utc()->second(0)->micro(0); } catch (\Throwable $e) { /* keep original */ }
-
-                // 1x2 коэффициенты
-                [$h,$d,$a] = $this->extractInlineOddsFromGame($g);
-                if (!is_numeric($h) || !is_numeric($d) || !is_numeric($a)) {
-                    continue; // без полного набора коэффициентов не создаём событие
-                }
-
-                // Апсерт события по external_id
-                $event = Event::updateOrCreate(
-                    [ 'external_id' => (string)$gameId ],
-                    [
-                        'competition' => $competition,
-                        'title' => $title,
-                        'status' => 'scheduled',
-                        'home_team' => (string)$homeName,
-                        'away_team' => (string)$awayName,
-                        'starts_at' => $dt,
-                        'home_odds' => (float)$h,
-                        'draw_odds' => (float)$d,
-                        'away_odds' => (float)$a,
-                    ]
-                );
-
-                // Привяжем gameId к eventId для последующих запросов /Odds/{gameId}
-                $outGameIds[$event->id] = (string)$gameId;
-
-                // Доп. рынки из inline odds блока
-                $marketsBlock = data_get($g, 'odds');
-                $extra = [];
-                $seenKeys = [];
-                if (is_array($marketsBlock)) {
-                    foreach ($marketsBlock as $m) {
-                        $name = (string)($m['marketName'] ?? $m['name'] ?? $m['market'] ?? '');
-                        $lower = strtolower($name);
-                        $marketId = $m['marketId'] ?? $m['id'] ?? null;
-                        // пропускаем 1x2 / Match Odds
-                        if ($marketId === 1 || str_contains($lower, '1x2') || str_contains($lower, 'match odds') || str_contains($lower, 'win-draw-win')) {
-                            continue;
-                        }
-                        // Дедупликация по marketId (при наличии) или по названию
-                        $dedupeKey = $marketId ? ('id:'.$marketId) : ('name:'.$lower);
-                        if (isset($seenKeys[$dedupeKey])) {
-                            continue;
-                        }
-                        $sels = $m['odds'] ?? $m['selections'] ?? [];
-                        $norm = [];
-                        foreach ($sels as $sel) {
-                            $label = (string)($sel['name'] ?? $sel['label'] ?? '');
-                            $value = $sel['value'] ?? $sel['price'] ?? $sel['decimal'] ?? $sel['odds'] ?? null;
-                            if (!is_numeric($value)) continue;
-                            $norm[] = [ 'label' => $label, 'price' => (float)$value ];
-                        }
-                        if (!empty($norm)) {
-                            $seenKeys[$dedupeKey] = true;
-                            $extra[] = [ 'name' => $name, 'selections' => $norm ];
-                        }
-                        if (count($extra) >= 10) break; // ограничиваем вывод
-                    }
-                }
-                if (!empty($extra)) {
-                    $outMarkets[$event->id] = $extra;
-                }
-            }
-        } catch (\Throwable $e) {
-            // не ломаем страницу при сбоях внешнего API
-        }
-        $bundle = ['markets' => $outMarkets, 'gameIds' => $outGameIds];
-        Cache::put($bundleKey, $bundle, now()->addMinutes(20));
-        return $bundle;
-    }
+    // Обновление лиг и апсёрты удалены: index() не вызывает внешний API и не пишет в БД.
 
     // Приводим названия команд к каноничному виду, чтобы избежать дублей
     private function canonicalTeamName(?string $name): ?string
