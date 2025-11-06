@@ -12,6 +12,11 @@
         <script src="{{ asset('js/app.js') }}" defer></script>
     @endif
     
+    <script>
+        // Предзагруженные доп. рынки: карта { [eventId]: Market[] }
+        window.MARKETS_MAP = {};
+    </script>
+    
     <style>
         .line tr:last-child td{
             border-bottom:0;
@@ -30,6 +35,12 @@
         .team-name { font-weight: 600; }
         .vs-sep { color: #6b7280; }
         .event-sub { margin-top: 4px; font-size: 12px; color: #6b7280; }
+        .extra-row { background: #f9fafb; }
+        .extra-markets { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 8px; }
+        .market-box { border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px; background: #fff; }
+        .market-title { font-weight: 600; margin-bottom: 6px; }
+        .market-sels { display: flex; flex-wrap: wrap; gap: 6px; }
+        .market-sel { font-size: 13px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; background: #f3f4f6; }
     </style>
     </head>
 <body>
@@ -134,6 +145,7 @@
         const oddsLast = document.getElementById('odds-last');
         function formatOdds(v) { return (typeof v === 'number' && isFinite(v)) ? v.toFixed(2) : '—'; }
         async function refreshOdds() {
+            if (!oddsBody || !oddsLast) return; // панель авто-обновления отсутствует
             try {
                 const res = await fetch('{{ route('odds.index') }}');
                 const json = await res.json();
@@ -166,8 +178,10 @@
                 oddsBody.innerHTML = `<tr><td colspan="3" class="muted">Ошибка API: ${e && e.message ? e.message : String(e)}</td></tr>`;
             }
         }
-        refreshOdds();
-        setInterval(refreshOdds, 60000); // refresh every 60s
+        if (oddsBody && oddsLast) {
+            refreshOdds();
+            setInterval(refreshOdds, 60000); // refresh every 60s
+        }
 
         document.querySelectorAll('.collapsible .collapse-toggle').forEach(function(btn) {
             btn.addEventListener('click', function() {
@@ -178,6 +192,105 @@
                 if (arrow) arrow.textContent = isCollapsed ? '▸' : '▾';
                 btn.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
             });
+        });
+
+        // Инъекция карт из бэкенда (ленивая загрузка — без предзагрузки рынков)
+        window.MARKETS_MAP = window.MARKETS_MAP || {};
+        window.GAME_IDS_MAP = (typeof @json($gameIdsMap ?? []) !== 'undefined' ? @json($gameIdsMap ?? []) : {});
+
+        // Extra markets toggler: при раскрытии делаем запрос /odds/game/{gameId}?bookmakerId=2
+        document.addEventListener('click', async function(e) {
+            var t = e.target.closest('.extra-toggle');
+            if (!t) return;
+            var targetId = t.getAttribute('data-target-id');
+            var row = document.getElementById(targetId);
+            if (!row) return;
+            // Toggle visibility (используем вычисленный стиль, чтобы корректно сворачивать)
+            var isHidden = window.getComputedStyle(row).display === 'none';
+            row.style.display = isHidden ? '' : 'none';
+            // Обновляем текст кнопки
+            t.textContent = isHidden ? '−' : '+';
+            if (!isHidden) return; // при сворачивании — без запроса
+            var box = row.querySelector('.extra-markets');
+            var state = row.querySelector('[data-state]');
+            if (!box || !state) return;
+            var loaded = box.getAttribute('data-loaded');
+            if (loaded === '1') return; // уже загружено
+            state.textContent = 'Загружаю доп. ставки…';
+            // Сначала всегда пробуем свежие рынки по gameId
+            var eid = t.getAttribute('data-event-id');
+            var gid = window.GAME_IDS_MAP ? window.GAME_IDS_MAP[eid] : null;
+            if (!gid) {
+                state.textContent = 'Игра не найдена для доп. ставок';
+                return;
+            }
+            try {
+                var base = '{{ url('/odds/game') }}';
+                var url = base + '/' + encodeURIComponent(String(gid)) + '?bookmakerId=2&_ts=' + Date.now();
+                var resp = await fetch(url, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                var json = await resp.json();
+                if (!json || json.ok !== true || !Array.isArray(json.markets)) throw new Error(json && json.error ? json.error : 'Bad payload');
+                var markets = json.markets;
+                if (!markets.length) {
+                    // Если с сервера пусто — попробуем предзагруженные рынки как фоллбэк
+                    var preEmpty = (window.MARKETS_MAP && window.MARKETS_MAP[eid]) ? window.MARKETS_MAP[eid] : null;
+                    if (Array.isArray(preEmpty) && preEmpty.length) {
+                        state.remove();
+                        box.setAttribute('data-loaded', '1');
+                        var headerHtml0 = '<div class="muted" style="margin-bottom:6px;"></div>';
+                        box.innerHTML = headerHtml0 + preEmpty.map(function(m) {
+                            var sels = Array.isArray(m.selections) ? m.selections : [];
+                            var selsHtml = sels.map(function(s) {
+                                var p = (typeof s.price === 'number' && isFinite(s.price)) ? s.price.toFixed(2) : '—';
+                                return '<span class="market-sel">' + s.label + ' • ' + p + '</span>';
+                            }).join('');
+                            return '<div class="market-box">'
+                                 +   '<div class="market-title">' + m.name + '</div>'
+                                 +   '<div class="market-sels">' + selsHtml + '</div>'
+                                 + '</div>';
+                        }).join('');
+                        return;
+                    }
+                    state.textContent = 'Доп. рынки не найдены';
+                    return;
+                }
+                state.remove();
+                box.setAttribute('data-loaded', '1');
+                var headerHtml2 = '<div class="muted" style="margin-bottom:6px;"></div>';
+                box.innerHTML = headerHtml2 + markets.map(function(m) {
+                    var sels = Array.isArray(m.selections) ? m.selections : [];
+                    var selsHtml = sels.map(function(s) {
+                        var p = (typeof s.price === 'number' && isFinite(s.price)) ? s.price.toFixed(2) : '—';
+                        return '<span class="market-sel">' + s.label + ' • ' + p + '</span>';
+                    }).join('');
+                    return '<div class="market-box">'
+                         +   '<div class="market-title">' + m.name + '</div>'
+                         +   '<div class="market-sels">' + selsHtml + '</div>'
+                         + '</div>';
+                }).join('');
+            } catch (err) {
+                // При ошибке запроса — фоллбэк на предзагруженные рынки, если есть
+                var pre = (window.MARKETS_MAP && window.MARKETS_MAP[eid]) ? window.MARKETS_MAP[eid] : null;
+                if (Array.isArray(pre) && pre.length) {
+                    state.remove();
+                    box.setAttribute('data-loaded', '1');
+                    var headerHtml = '<div class="muted" style="margin-bottom:6px;"></div>';
+                    box.innerHTML = headerHtml + pre.map(function(m) {
+                        var sels = Array.isArray(m.selections) ? m.selections : [];
+                        var selsHtml = sels.map(function(s) {
+                            var p = (typeof s.price === 'number' && isFinite(s.price)) ? s.price.toFixed(2) : '—';
+                            return '<span class="market-sel">' + s.label + ' • ' + p + '</span>';
+                        }).join('');
+                        return '<div class="market-box">'
+                             +   '<div class="market-title">' + m.name + '</div>'
+                             +   '<div class="market-sels">' + selsHtml + '</div>'
+                             + '</div>';
+                    }).join('');
+                } else {
+                    state.textContent = 'Ошибка загрузки доп. ставок';
+                }
+            }
         });
     });
     </script>

@@ -2,7 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\BetController;
-use App\Http\Controllers\SstatsController;
 use App\Http\Controllers\StatsController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -13,6 +12,10 @@ use App\Http\Controllers\OddsController;
 Route::get('/', [BetController::class, 'index'])->name('home');
 // Public odds endpoint for homepage auto-refresh panel
 Route::get('/odds', [OddsController::class, 'odds'])->name('odds.index');
+// Extra markets for an event (JSON)
+Route::get('/events/{event}/markets', [OddsController::class, 'markets'])->name('events.markets');
+// Extra markets by direct gameId (JSON)
+Route::get('/odds/game/{gameId}', [OddsController::class, 'marketsByGame'])->name('odds.byGame');
 
 // Страница документации: авторизация по переменной окружения DOCS_AUTH_MODE
 // test — публично; prod — только админ (AdminOnly)
@@ -25,8 +28,6 @@ Route::post('/events/{event}/settle', [BetController::class, 'settle'])->name('e
 Route::get('/events/sync-results', [BetController::class, 'syncResults'])->name('events.sync');
 // Page removed per request
 
-// sstats.net explorer
-Route::get('/sstats', [SstatsController::class, 'index'])->name('sstats.index')->middleware('auth');
 // Statistics page (public access)
 Route::get('/stats', [StatsController::class, 'index'])->name('stats.index');
 

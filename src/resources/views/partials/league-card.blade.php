@@ -7,6 +7,7 @@
                 <th>Дата/время</th>
                 <th>Коэфф. (П1 / Ничья / П2)</th>
                 <th>Статус</th>
+                <th>Доп. ставки</th>
             </tr>
         </thead>
         <tbody>
@@ -44,7 +45,27 @@
                             —
                         @endif
                     </td>
-                    <td class="text-sm muted {{ $ev->status === 'scheduled' ? 'muted' : 'text-green-500' }}" data-label="Статус">{{ $ev->status ?? '—' }}</td>
+                    <td class="text-sm muted {{ $ev->status === 'scheduled' ? 'muted' : 'text-green-500' }}" data-label="Статус">
+                        {{ $ev->status ?? '—' }}
+                        @if(($ev->status ?? 'scheduled') === 'scheduled')
+                            
+                        @endif
+                    </td>
+                    <td data-label="Доп. ставки">
+                        <button type="button"
+                                class="extra-toggle"
+                                title="Доп. ставки"
+                                data-event-id="{{ $ev->id }}"
+                                data-target-id="extra-{{ $ev->id }}"
+                                style="margin-left:8px; padding:2px 8px; border:1px solid #9ca3af; border-radius:4px; background:#fff;">+
+                        </button>
+                    </td>
+                </tr>
+                <tr id="extra-{{ $ev->id }}" class="extra-row" style="display:none;">
+                    <td colspan="4">
+                        <div class="muted" data-state="empty">Доп. ставки</div>
+                        <div class="extra-markets" data-loaded="0"></div>
+                    </td>
                 </tr>
             @endforeach
         </tbody>

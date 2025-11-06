@@ -12,6 +12,7 @@ class Event extends Model
     protected $fillable = [
         'title', 'competition', 'starts_at', 'ends_at', 'status', 'result',
         'home_team', 'away_team', 'home_odds', 'draw_odds', 'away_odds',
+        'external_id',
     ];
 
     protected $casts = [
