@@ -75,18 +75,20 @@
                                     <td>
                                     @foreach($coupon->bets as $l)
                                         @php($selMap = ['home' => 'П1', 'draw' => 'Ничья', 'away' => 'П2'])
-                                        @php($placedOdds = $l->event ? (match($l->selection){
+                                        @php($selKey = strtolower(trim($l->selection)))
+                                        @php($placedOdds = $l->event ? match($selKey) {
                                             'home' => $l->event->home_odds,
                                             'draw' => $l->event->draw_odds,
                                             'away' => $l->event->away_odds,
-                                        }) : null)
+                                            default => null,
+                                        } : null)
                                         <div class="mb-2 text-sm">
                                             @if($l->event && $l->event->home_team && $l->event->away_team)
                                                 {{ $l->event->home_team }} vs {{ $l->event->away_team }}
                                             @else
                                                 {{ $l->event->title ?? ('Event #'.$l->event_id) }}
                                             @endif
-                                            — {{ $selMap[$l->selection] ?? strtoupper($l->selection) }}
+                                            — {{ $selMap[$selKey] ?? $l->selection }}
                                             @if($placedOdds)
                                                 <span class="muted">(кэф.: <span class="text-orange-400 text-base">{{ number_format($placedOdds, 2) }}</span>)</span>
                                             @endif
@@ -186,6 +188,8 @@
             state.textContent = 'Загружаю доп. ставки…';
             // Сначала всегда пробуем свежие рынки по gameId
             const eid = t.getAttribute('data-event-id');
+            const homeName = t.getAttribute('data-home') || '';
+            const awayName = t.getAttribute('data-away') || '';
             const gid = window.GAME_IDS_MAP ? window.GAME_IDS_MAP[eid] : null;
             if (!gid) {
                 state.textContent = 'Игра не найдена для доп. ставок';
@@ -229,7 +233,15 @@
                     const sels = Array.isArray(m.selections) ? m.selections : [];
                     const selsHtml = sels.map(function(s) {
                         const p = (typeof s.price === 'number' && isFinite(s.price)) ? s.price.toFixed(2) : '—';
-                        return '<span class="market-sel">' + s.label + ' • ' + p + '</span>';
+                        const selLabel = String(s.label || '').trim();
+                        const selData = selLabel;
+                        return '<span class="market-sel odd-btn"'
+                             + ' data-event-id="' + String(eid) + '"'
+                             + ' data-market="' + String(m.name || '').replace(/\"/g, '&quot;') + '"'
+                             + ' data-selection="' + selData.replace(/\"/g, '&quot;') + '"'
+                             + ' data-home="' + homeName.replace(/\"/g, '&quot;') + '"'
+                             + ' data-away="' + awayName.replace(/\"/g, '&quot;') + '"'
+                             + ' data-odds="' + p + '">' + selLabel + ' • ' + p + '</span>';
                     }).join('');
                     return '<div class="market-box">'
                          +   '<div class="market-title">' + m.name + '</div>'
@@ -245,10 +257,18 @@
                     const headerHtml = '<div class="muted" style="margin-bottom:6px;"></div>';
                     box.innerHTML = headerHtml + pre.map(function(m) {
                         const sels = Array.isArray(m.selections) ? m.selections : [];
-                        const selsHtml = sels.map(function(s) {
-                            const p = (typeof s.price === 'number' && isFinite(s.price)) ? s.price.toFixed(2) : '—';
-                            return '<span class="market-sel">' + s.label + ' • ' + p + '</span>';
-                        }).join('');
+                    const selsHtml = sels.map(function(s) {
+                        const p = (typeof s.price === 'number' && isFinite(s.price)) ? s.price.toFixed(2) : '—';
+                        const selLabel = String(s.label || '').trim();
+                        const selData = selLabel;
+                        return '<span class="market-sel odd-btn"'
+                             + ' data-event-id="' + String(eid) + '"'
+                             + ' data-market="' + String(m.name || '').replace(/\"/g, '&quot;') + '"'
+                             + ' data-selection="' + selData.replace(/\"/g, '&quot;') + '"'
+                             + ' data-home="' + homeName.replace(/\"/g, '&quot;') + '"'
+                             + ' data-away="' + awayName.replace(/\"/g, '&quot;') + '"'
+                             + ' data-odds="' + p + '">' + selLabel + ' • ' + p + '</span>';
+                    }).join('');
                         return '<div class="market-box">'
                              +   '<div class="market-title">' + m.name + '</div>'
                              +   '<div class="market-sels">' + selsHtml + '</div>'

@@ -108,7 +108,10 @@ class BetController extends Controller
             'amount_demo' => ['required', 'numeric', 'min:0.01'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.event_id' => ['required', 'exists:events,id'],
-            'items.*.selection' => ['required', 'in:home,draw,away'],
+            // Разрешаем произвольные селекции для доп. рынков
+            'items.*.selection' => ['required', 'string', 'max:100'],
+            // Для доп. рынков принимаем кэф с клиента (необязательный)
+            'items.*.odds' => ['nullable', 'numeric', 'min:0.01'],
         ]);
 
         // Определяем имя игрока: для авторизованного — username, иначе — из формы
@@ -123,12 +126,19 @@ class BetController extends Controller
         foreach ($data['items'] as $item) {
             $ev = Event::find($item['event_id']);
             if (!$ev) continue;
-            $odds = match ($item['selection']) {
-                'home' => $ev->home_odds,
-                'draw' => $ev->draw_odds,
-                'away' => $ev->away_odds,
-            };
-            $totalOdds *= ($odds ?? 1);
+            $sel = (string) ($item['selection'] ?? '');
+            // Для основных исходов берём кэфы из события, для доп. рынков — из payload
+            if (in_array($sel, ['home','draw','away'], true)) {
+                $odds = match ($sel) {
+                    'home' => $ev->home_odds,
+                    'draw' => $ev->draw_odds,
+                    'away' => $ev->away_odds,
+                };
+                $totalOdds *= ($odds ?? 1);
+            } else {
+                $placed = $item['odds'] ?? null;
+                $totalOdds *= (is_numeric($placed) ? (float)$placed : 1);
+            }
         }
 
         $coupon = Coupon::create([

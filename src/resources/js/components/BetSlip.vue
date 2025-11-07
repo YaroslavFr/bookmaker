@@ -27,10 +27,10 @@
         <ul id="slip-list">
           <li v-for="item in slip" :key="item.eventId" class="slip-item">
             <div class="row row-between">
-              <div>
+            <div>
               <div>
                 <strong>{{ item.home && item.away ? `${item.home} vs ${item.away}` : `Event #${item.eventId}` }}</strong>
-                <div class="muted">Исход: {{ selectionLabel(item.selection, item.home, item.away) }} • кэф {{ item.odds }}</div>
+                <div class="muted">Исход: <span v-if="item.market" class="market-title">{{ item.market }}</span><span v-if="item.market"> — </span><span class="market-sel">{{ selectionLabel(item.selection, item.home, item.away) }}</span> • кэф <span class="text-orange-400 text-base">{{ item.odds }}</span></div>
               </div>
               <button class="" type="button" @click="removeItem(item.eventId)">X</button>
             </div>
@@ -72,13 +72,22 @@ const errors = ref({ name: null, amount: null, slip: null, general: null })
 const selectionLabel = (sel, home, away) => {
   if (sel === 'home') return home || 'home'
   if (sel === 'away') return away || 'away'
-  return 'draw'
+  if (sel === 'draw') return 'draw'
+  // Для доп. рынков показываем метку селекции как есть
+  return sel
 }
 
 function addOrReplaceSlipItem(item) {
+  // Разрешаем только один матч в купоне. Если выбран другой матч — очищаем.
+  if (slip.value.length > 0 && slip.value[0].eventId !== item.eventId) {
+    slip.value = []
+  }
   const idx = slip.value.findIndex(i => i.eventId === item.eventId)
-  if (idx >= 0) slip.value[idx] = item
-  else slip.value.push(item)
+  if (idx >= 0) {
+    slip.value[idx] = item
+  } else {
+    slip.value.push(item)
+  }
 }
 
 function removeItem(eventId) {
@@ -122,11 +131,12 @@ function handleOddClick(e) {
   const btn = e.target.closest('.odd-btn')
   if (!btn) return
   const eventId = btn.getAttribute('data-event-id')
+  const market = btn.getAttribute('data-market')
   const selection = btn.getAttribute('data-selection')
   const home = btn.getAttribute('data-home')
   const away = btn.getAttribute('data-away')
   const odds = btn.getAttribute('data-odds')
-  addOrReplaceSlipItem({ eventId, home, away, selection, odds })
+  addOrReplaceSlipItem({ eventId, home, away, selection, odds, market })
 }
 
 async function submitAll() {
@@ -141,7 +151,7 @@ async function submitAll() {
     const csrfToken = rootEl?.dataset?.csrf || ''
     const postUrl = rootEl?.dataset?.postUrl || ''
 
-    const items = slip.value.map(i => ({ event_id: Number(i.eventId), selection: i.selection }))
+    const items = slip.value.map(i => ({ event_id: Number(i.eventId), selection: i.selection, odds: Number(i.odds), market: i.market }))
     const payload = {
       bettor_name: bettorName.value,
       amount_demo: Number(amountDemo.value),
