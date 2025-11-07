@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use App\Models\Event;
-use Barryvdh\Debugbar\Facades\Debugbar;
 
 class OddsController extends Controller
 {
@@ -14,9 +13,7 @@ class OddsController extends Controller
      */
     public function markets(Event $event, Request $request)
     {
-        if (Debugbar::isEnabled()) {
-            Debugbar::addMessage(['event_id' => $event->id, 'external_id' => $event->external_id, 'competition' => $event->competition], 'markets_called');
-        }
+        
         if (!$event->external_id) {
             return response()->json(['ok' => false, 'error' => 'Missing external_id for event'], 400);
         }
@@ -88,9 +85,7 @@ class OddsController extends Controller
                 }
                 if (count($out) >= 10) break;
             }
-            if (function_exists('debugbar') && \Barryvdh\Debugbar\Facades\Debugbar::isEnabled()) {
-                debugbar()->log(['marketsByGame_count' => count($out), 'sample' => array_slice($out, 0, 2)]);
-            }
+            
             return response()->json(['ok' => true, 'count' => count($out), 'markets' => $out]);
         } catch (\Throwable $e) {
             return response()->json(['ok' => false, 'error' => $e->getMessage()], 500);

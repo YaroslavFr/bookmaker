@@ -10,7 +10,6 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
-use Barryvdh\Debugbar\Facades\Debugbar;
 
 class BetController extends Controller
 {
@@ -22,7 +21,6 @@ class BetController extends Controller
 
         // Получаем отдельные ленты событий: EPL, UCL, ITA
         $hasCompetition = Schema::hasColumn('events', 'competition');
-        Debugbar::startMeasure('Events_load', 'Load events for leagues');
         if ($hasCompetition) {
             $eventsEpl = Event::with('bets')
                 ->where('competition', 'EPL')
@@ -57,7 +55,6 @@ class BetController extends Controller
             $eventsUcl = collect();
             $eventsIta = collect();
         }
-        Debugbar::stopMeasure('Events_load');
         // Формируем человекочитаемые заголовки без канонизации: используем "сырые" названия.
         $prepareForView = function ($collection) {
             return $collection->map(function ($ev) {
