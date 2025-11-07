@@ -205,6 +205,30 @@ td {
   filter: brightness(0.95);
 }
 
+.line tr:last-child td{
+            border-bottom:0;
+        }
+        .line td{
+            padding:3px 2px;
+        }
+        .muted { color: #6b7280; font-size: 12px; }
+        .wrap { word-break: break-word; }
+        .collapsible .collapse-toggle { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 14px; padding: 6px 10px; }
+        .collapsible .arrow { font-size: 16px; line-height: 1; }
+        .collapsible.is-collapsed .collapsible-body { display: none; }
+        .row-between { display: flex; align-items: center; justify-content: space-between; }
+        .card-header { margin-bottom: 8px; }
+        .teams-row {font-size: 14px; display: inline-flex; align-items: center; gap: 10px; }
+        .team-name { font-weight: 600; }
+        .vs-sep { color: #6b7280; }
+        .event-sub { margin-top: 4px; font-size: 12px; color: #6b7280; }
+        .extra-row { background: #f9fafb; }
+        .extra-markets { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 8px; }
+        .market-box { border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px; background: #fff; }
+        .market-title { font-weight: 600; margin-bottom: 6px; }
+        .market-sels { display: flex; flex-wrap: wrap; gap: 6px; }
+        .market-sel { font-size: 13px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; background: #f3f4f6; }
+        
 /* Table header polish */
 table thead th {
   background: #f8fafc;

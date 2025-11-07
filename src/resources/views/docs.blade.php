@@ -326,6 +326,12 @@ php vendor/bin/envoy run release --server=beget --branch=main
 
 # Подсказка: чтобы увидеть список задач
 docker compose exec app vendor/bin/envoy tasks
+
+# Запустить Laravel dev-сервер (в контейнере)
+docker compose exec app php artisan serve --host=0.0.0.0 --port=8000 --no-reload
+
+# Альтернатива без Compose (по имени контейнера)
+docker exec games_app php artisan serve --host=0.0.0.0 --port=8000 --no-reload
 </code></pre></div>
                 </div>
             </section>

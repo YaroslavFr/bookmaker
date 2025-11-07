@@ -30,7 +30,7 @@ class BetController extends Controller
                 ->where('starts_at', '>', now())
                 ->orderByDesc('starts_at')
                 ->orderByDesc('id')
-                ->limit(60)
+                ->limit(12)
                 ->get();
             $eventsUcl = Event::with('bets')
                 ->where('competition', 'UCL')
@@ -38,7 +38,7 @@ class BetController extends Controller
                 ->where('starts_at', '>', now())
                 ->orderByDesc('starts_at')
                 ->orderByDesc('id')
-                ->limit(60)
+                ->limit(12)
                 ->get();
             $eventsIta = Event::with('bets')
                 ->where('competition', 'ITA')
@@ -46,7 +46,7 @@ class BetController extends Controller
                 ->where('starts_at', '>', now())
                 ->orderByDesc('starts_at')
                 ->orderByDesc('id')
-                ->limit(60)
+                ->limit(12)
                 ->get();
         } else {
             // Фоллбэк до применения миграции: показываем все события 
@@ -100,98 +100,6 @@ class BetController extends Controller
             'marketsMap' => $marketsMap,
             'gameIdsMap' => $gameIdsMap,
         ]);
-    }
-
-    /**
-     * Извлекает коэффициенты 1x2 из блока odds игры.
-     */
-    private function extractInlineOddsFromGame(array $game): array
-    {
-        $markets = data_get($game, 'odds');
-        if (!is_array($markets)) return [null, null, null];
-        $home = null; $draw = null; $away = null;
-        foreach ($markets as $m) {
-            $marketId = $m['marketId'] ?? $m['id'] ?? null;
-            $name = strtolower((string)($m['marketName'] ?? $m['name'] ?? ''));
-            if ($marketId === 1 || str_contains($name, '1x2') || str_contains($name, 'match odds') || str_contains($name, 'win-draw-win')) {
-                $sels = $m['odds'] ?? $m['selections'] ?? [];
-                foreach ($sels as $sel) {
-                    $label = strtolower((string)($sel['name'] ?? $sel['label'] ?? ''));
-                    $value = $sel['value'] ?? $sel['price'] ?? $sel['decimal'] ?? $sel['odds'] ?? null;
-                    if (!is_numeric($value)) continue;
-                    if (str_contains($label, 'home')) $home = (float)$value;
-                    elseif (str_contains($label, 'draw')) $draw = (float)$value;
-                    elseif (str_contains($label, 'away')) $away = (float)$value;
-                }
-                break;
-            }
-        }
-        return [$home, $draw, $away];
-    }
-
-    // Обновление лиг и апсёрты удалены: index() не вызывает внешний API и не пишет в БД.
-
-    // Приводим названия команд к каноничному виду, чтобы избежать дублей
-    private function canonicalTeamName(?string $name): ?string
-    {
-        if ($name === null) return null;
-        $n = trim($name);
-        if ($n === '') return $n;
-        // Уберём лишние пробелы
-        $n = preg_replace('/\s+/', ' ', $n);
-        $lower = mb_strtolower($n);
-        // Приведём распространённые алиасы клубов к единообразным названиям
-        $aliases = [
-            'man utd' => 'Manchester United',
-            'manchester utd' => 'Manchester United',
-            'man united' => 'Manchester United',
-            'man city' => 'Manchester City',
-            'bayern munchen' => 'Bayern Munich',
-            'psg' => 'Paris Saint-Germain',
-            'barca' => 'Barcelona',
-            'real mad' => 'Real Madrid',
-            'inter milano' => 'Inter Milan',
-            'ath bilbao' => 'Athletic Bilbao',
-            'borussia m' => 'Borussia Monchengladbach',
-            'cska moskva' => 'CSKA Moscow',
-            'spartak m' => 'Spartak Moscow',
-            'ogc nice' => 'Nice',
-            'ol lyon' => 'Lyon',
-            'as roma' => 'Roma',
-            'ss lazio' => 'Lazio',
-            // EPL консистентные короткие формы
-            'leeds united' => 'Leeds',
-            'newcastle united' => 'Newcastle',
-            'brighton & hove albion' => 'Brighton',
-            'brighton and hove albion' => 'Brighton',
-            'wolverhampton wanderers' => 'Wolves',
-            'west ham united' => 'West Ham',
-            'afc bournemouth' => 'Bournemouth',
-            'tottenham hotspur' => 'Tottenham',
-            'nottm forest' => 'Nottingham Forest',
-            'west bromwich albion' => 'West Brom',
-            'queens park rangers' => 'QPR',
-            'sheffield united' => 'Sheffield United',
-            'sheffield wednesday' => 'Sheffield Wednesday',
-            'bristol rovers' => 'Bristol Rovers',
-            'bristol city' => 'Bristol City',
-            'mk dons' => 'Milton Keynes Dons',
-            'manchester u.' => 'Manchester United',
-            'manchester c.' => 'Manchester City',
-        ];
-        if (isset($aliases[$lower])) return $aliases[$lower];
-        // Нормализуем "FC"
-        $n = preg_replace('/\bfc\b/i', 'FC', $n);
-        // Уберём префиксы/суффиксы вида "AFC ", "CF", "C.F.", "Club"
-        $n = preg_replace('/^AFC\s+/i', '', $n);
-        $n = preg_replace('/\bC\.?F\.?\b/i', '', $n);
-        $n = preg_replace('/\bClub\b/i', '', $n);
-        // Унифицируем "&" и "and"
-        $n = preg_replace('/\s*&\s*/', ' and ', $n);
-        $n = preg_replace('/\s+and\s+/', ' and ', $n);
-        // Дополнительная очистка двойных пробелов после замен
-        $n = preg_replace('/\s+/', ' ', trim($n));
-        return $n;
     }
 
     public function store(Request $request)

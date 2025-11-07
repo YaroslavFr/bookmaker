@@ -11,37 +11,6 @@
         <link rel="stylesheet" href="{{ asset('css/app.css') }}">
         <script src="{{ asset('js/app.js') }}" defer></script>
     @endif
-    
-    <script>
-        // Предзагруженные доп. рынки: карта { [eventId]: Market[] }
-        window.MARKETS_MAP = {};
-    </script>
-    
-    <style>
-        .line tr:last-child td{
-            border-bottom:0;
-        }
-        .line td{
-            padding:3px 2px;
-        }
-        .muted { color: #6b7280; font-size: 12px; }
-        .wrap { word-break: break-word; }
-        .collapsible .collapse-toggle { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 14px; padding: 6px 10px; }
-        .collapsible .arrow { font-size: 16px; line-height: 1; }
-        .collapsible.is-collapsed .collapsible-body { display: none; }
-        .row-between { display: flex; align-items: center; justify-content: space-between; }
-        .card-header { margin-bottom: 8px; }
-        .teams-row {font-size: 14px; display: inline-flex; align-items: center; gap: 10px; }
-        .team-name { font-weight: 600; }
-        .vs-sep { color: #6b7280; }
-        .event-sub { margin-top: 4px; font-size: 12px; color: #6b7280; }
-        .extra-row { background: #f9fafb; }
-        .extra-markets { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 8px; }
-        .market-box { border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px; background: #fff; }
-        .market-title { font-weight: 600; margin-bottom: 6px; }
-        .market-sels { display: flex; flex-wrap: wrap; gap: 6px; }
-        .market-sel { font-size: 13px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; background: #f3f4f6; }
-    </style>
     </head>
 <body>
     @include('partials.header')
@@ -137,8 +106,6 @@
                 @endif
             </div>
 
-            
-
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         const oddsBody = document.getElementById('odds-body');
@@ -147,7 +114,7 @@
         async function refreshOdds() {
             if (!oddsBody || !oddsLast) return; // панель авто-обновления отсутствует
             try {
-                const res = await fetch('{{ route('odds.index') }}');
+                const res = await fetch("{{ route('odds.index') }}");
                 const json = await res.json();
                 oddsLast.textContent = 'Последнее обновление: ' + new Date().toLocaleString();
                 const items = Array.isArray(json.items) ? json.items : [];
@@ -185,10 +152,10 @@
 
         document.querySelectorAll('.collapsible .collapse-toggle').forEach(function(btn) {
             btn.addEventListener('click', function() {
-                var wrap = btn.closest('.collapsible');
+                const wrap = btn.closest('.collapsible');
                 if (!wrap) return;
-                var arrow = btn.querySelector('.arrow');
-                var isCollapsed = wrap.classList.toggle('is-collapsed');
+                const arrow = btn.querySelector('.arrow');
+                const isCollapsed = wrap.classList.toggle('is-collapsed');
                 if (arrow) arrow.textContent = isCollapsed ? '▸' : '▾';
                 btn.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
             });
@@ -200,49 +167,49 @@
 
         // Extra markets toggler: при раскрытии делаем запрос /odds/game/{gameId}?bookmakerId=2
         document.addEventListener('click', async function(e) {
-            var t = e.target.closest('.extra-toggle');
+            const t = e.target.closest('.extra-toggle');
             if (!t) return;
-            var targetId = t.getAttribute('data-target-id');
-            var row = document.getElementById(targetId);
+            const targetId = t.getAttribute('data-target-id');
+            const row = document.getElementById(targetId);
             if (!row) return;
             // Toggle visibility (используем вычисленный стиль, чтобы корректно сворачивать)
-            var isHidden = window.getComputedStyle(row).display === 'none';
+            const isHidden = window.getComputedStyle(row).display === 'none';
             row.style.display = isHidden ? '' : 'none';
             // Обновляем текст кнопки
             t.textContent = isHidden ? '−' : '+';
             if (!isHidden) return; // при сворачивании — без запроса
-            var box = row.querySelector('.extra-markets');
-            var state = row.querySelector('[data-state]');
+            const box = row.querySelector('.extra-markets');
+            const state = row.querySelector('[data-state]');
             if (!box || !state) return;
-            var loaded = box.getAttribute('data-loaded');
+            const loaded = box.getAttribute('data-loaded');
             if (loaded === '1') return; // уже загружено
             state.textContent = 'Загружаю доп. ставки…';
             // Сначала всегда пробуем свежие рынки по gameId
-            var eid = t.getAttribute('data-event-id');
-            var gid = window.GAME_IDS_MAP ? window.GAME_IDS_MAP[eid] : null;
+            const eid = t.getAttribute('data-event-id');
+            const gid = window.GAME_IDS_MAP ? window.GAME_IDS_MAP[eid] : null;
             if (!gid) {
                 state.textContent = 'Игра не найдена для доп. ставок';
                 return;
             }
             try {
-                var base = '{{ url('/odds/game') }}';
-                var url = base + '/' + encodeURIComponent(String(gid)) + '?bookmakerId=2&_ts=' + Date.now();
-                var resp = await fetch(url, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+                const base = "{{ url('/odds/game') }}";
+                const url = base + '/' + encodeURIComponent(String(gid)) + '?bookmakerId=2&_ts=' + Date.now();
+                const resp = await fetch(url, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
                 if (!resp.ok) throw new Error('HTTP ' + resp.status);
-                var json = await resp.json();
+                const json = await resp.json();
                 if (!json || json.ok !== true || !Array.isArray(json.markets)) throw new Error(json && json.error ? json.error : 'Bad payload');
-                var markets = json.markets;
+                const markets = json.markets;
                 if (!markets.length) {
                     // Если с сервера пусто — попробуем предзагруженные рынки как фоллбэк
-                    var preEmpty = (window.MARKETS_MAP && window.MARKETS_MAP[eid]) ? window.MARKETS_MAP[eid] : null;
+                    const preEmpty = (window.MARKETS_MAP && window.MARKETS_MAP[eid]) ? window.MARKETS_MAP[eid] : null;
                     if (Array.isArray(preEmpty) && preEmpty.length) {
                         state.remove();
                         box.setAttribute('data-loaded', '1');
-                        var headerHtml0 = '<div class="muted" style="margin-bottom:6px;"></div>';
+                        const headerHtml0 = '<div class="muted" style="margin-bottom:6px;"></div>';
                         box.innerHTML = headerHtml0 + preEmpty.map(function(m) {
-                            var sels = Array.isArray(m.selections) ? m.selections : [];
-                            var selsHtml = sels.map(function(s) {
-                                var p = (typeof s.price === 'number' && isFinite(s.price)) ? s.price.toFixed(2) : '—';
+                            const sels = Array.isArray(m.selections) ? m.selections : [];
+                            const selsHtml = sels.map(function(s) {
+                                const p = (typeof s.price === 'number' && isFinite(s.price)) ? s.price.toFixed(2) : '—';
                                 return '<span class="market-sel">' + s.label + ' • ' + p + '</span>';
                             }).join('');
                             return '<div class="market-box">'
@@ -257,11 +224,11 @@
                 }
                 state.remove();
                 box.setAttribute('data-loaded', '1');
-                var headerHtml2 = '<div class="muted" style="margin-bottom:6px;"></div>';
+                const headerHtml2 = '<div class="muted" style="margin-bottom:6px;"></div>';
                 box.innerHTML = headerHtml2 + markets.map(function(m) {
-                    var sels = Array.isArray(m.selections) ? m.selections : [];
-                    var selsHtml = sels.map(function(s) {
-                        var p = (typeof s.price === 'number' && isFinite(s.price)) ? s.price.toFixed(2) : '—';
+                    const sels = Array.isArray(m.selections) ? m.selections : [];
+                    const selsHtml = sels.map(function(s) {
+                        const p = (typeof s.price === 'number' && isFinite(s.price)) ? s.price.toFixed(2) : '—';
                         return '<span class="market-sel">' + s.label + ' • ' + p + '</span>';
                     }).join('');
                     return '<div class="market-box">'
@@ -271,15 +238,15 @@
                 }).join('');
             } catch (err) {
                 // При ошибке запроса — фоллбэк на предзагруженные рынки, если есть
-                var pre = (window.MARKETS_MAP && window.MARKETS_MAP[eid]) ? window.MARKETS_MAP[eid] : null;
+                const pre = (window.MARKETS_MAP && window.MARKETS_MAP[eid]) ? window.MARKETS_MAP[eid] : null;
                 if (Array.isArray(pre) && pre.length) {
                     state.remove();
                     box.setAttribute('data-loaded', '1');
-                    var headerHtml = '<div class="muted" style="margin-bottom:6px;"></div>';
+                    const headerHtml = '<div class="muted" style="margin-bottom:6px;"></div>';
                     box.innerHTML = headerHtml + pre.map(function(m) {
-                        var sels = Array.isArray(m.selections) ? m.selections : [];
-                        var selsHtml = sels.map(function(s) {
-                            var p = (typeof s.price === 'number' && isFinite(s.price)) ? s.price.toFixed(2) : '—';
+                        const sels = Array.isArray(m.selections) ? m.selections : [];
+                        const selsHtml = sels.map(function(s) {
+                            const p = (typeof s.price === 'number' && isFinite(s.price)) ? s.price.toFixed(2) : '—';
                             return '<span class="market-sel">' + s.label + ' • ' + p + '</span>';
                         }).join('');
                         return '<div class="market-box">'
