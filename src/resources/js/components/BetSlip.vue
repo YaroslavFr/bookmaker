@@ -78,10 +78,7 @@ const selectionLabel = (sel, home, away) => {
 }
 
 function addOrReplaceSlipItem(item) {
-  // Разрешаем только один матч в купоне. Если выбран другой матч — очищаем.
-  if (slip.value.length > 0 && slip.value[0].eventId !== item.eventId) {
-    slip.value = []
-  }
+  // Разрешаем несколько матчей в купоне. Для одного матча храним один исход.
   const idx = slip.value.findIndex(i => i.eventId === item.eventId)
   if (idx >= 0) {
     slip.value[idx] = item
