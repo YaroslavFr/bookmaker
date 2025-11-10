@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Sport Bets</title>
+    <title>Sport FreeBets</title>
     <link rel="stylesheet" href="{{ asset('css/bets.css') }}">
     @if (file_exists(public_path('build/manifest.json')))
         @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -190,6 +190,40 @@
                 return;
             }
             try {
+                // Переводы названий рынков доп. ставок
+                const MARKET_TRANSLATIONS = {
+                    // базовые соответствия (нижний регистр)
+                    'second half winner': '2 тайм',
+                    'asian handicap': 'Азиатский Гандикап',
+                    'goals over/under': 'Тоталы',
+                    'goals over/under first half': 'Тоталы 1 тайм',
+                    'goals over/under - second half': 'Тоталы 2 тайм',
+                    'goals over/under second half': 'Тоталы 2 тайм',
+                    'ht/ft double': '1 Тайм / 2 Тайм',
+                    'both teams score': 'Обе забьют',
+                    'win to nil - home': '1 забьет / не забьет',
+                    'win to nil - away': '2 забьет / не забьет',
+                    'handicap result': 'Фора',
+                };
+                function translateMarketTitle(name) {
+                    if (!name) return '';
+                    const raw = String(name).trim();
+                    const norm = raw.toLowerCase().replace(/\s+/g, ' ');
+                    // точное совпадение
+                    if (MARKET_TRANSLATIONS[norm]) return MARKET_TRANSLATIONS[norm];
+                    // эвристики по включению ключевых слов
+                    if (norm.includes('asian handicap')) return MARKET_TRANSLATIONS['asian handicap'];
+                    if (norm.includes('handicap') && norm.includes('result')) return MARKET_TRANSLATIONS['handicap result'];
+                    if (norm.includes('goals over/under') && norm.includes('first half')) return MARKET_TRANSLATIONS['goals over/under first half'];
+                    if (norm.includes('goals over/under') && (norm.includes('second half') || norm.includes('2nd half'))) return MARKET_TRANSLATIONS['goals over/under second half'];
+                    if (norm.includes('goals over/under')) return MARKET_TRANSLATIONS['goals over/under'];
+                    if (norm.includes('ht/ft') || norm.includes('half time/full time')) return MARKET_TRANSLATIONS['ht/ft double'];
+                    if (norm.includes('both teams score')) return MARKET_TRANSLATIONS['both teams score'];
+                    if (norm.includes('win to nil') && norm.includes('home')) return MARKET_TRANSLATIONS['win to nil - home'];
+                    if (norm.includes('win to nil') && norm.includes('away')) return MARKET_TRANSLATIONS['win to nil - away'];
+                    if (norm.includes('second half winner')) return MARKET_TRANSLATIONS['second half winner'];
+                    return raw; // без перевода — оригинал
+                }
                 const base = "{{ url('/odds/game') }}";
                 const url = base + '/' + encodeURIComponent(String(gid)) + '?bookmakerId=2&_ts=' + Date.now();
                 const resp = await fetch(url, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
@@ -211,7 +245,7 @@
                                 return '<span class="market-sel">' + s.label + ' • ' + p + '</span>';
                             }).join('');
                             return '<div class="market-box">'
-                                 +   '<div class="market-title">' + m.name + '</div>'
+                                 +   '<div class="market-title">' + translateMarketTitle(m.name) + '</div>'
                                  +   '<div class="market-sels">' + selsHtml + '</div>'
                                  + '</div>';
                         }).join('');
@@ -231,14 +265,14 @@
                         const selData = selLabel;
                         return '<span class="market-sel odd-btn"'
                              + ' data-event-id="' + String(eid) + '"'
-                             + ' data-market="' + String(m.name || '').replace(/\"/g, '&quot;') + '"'
+                             + ' data-market="' + String(translateMarketTitle(m.name) || '').replace(/\"/g, '&quot;') + '"'
                              + ' data-selection="' + selData.replace(/\"/g, '&quot;') + '"'
                              + ' data-home="' + homeName.replace(/\"/g, '&quot;') + '"'
                              + ' data-away="' + awayName.replace(/\"/g, '&quot;') + '"'
                              + ' data-odds="' + p + '">' + selLabel + ' • ' + p + '</span>';
                     }).join('');
                     return '<div class="market-box">'
-                         +   '<div class="market-title">' + m.name + '</div>'
+                         +   '<div class="market-title">' + translateMarketTitle(m.name) + '</div>'
                          +   '<div class="market-sels">' + selsHtml + '</div>'
                          + '</div>';
                 }).join('');
@@ -257,14 +291,14 @@
                         const selData = selLabel;
                         return '<span class="market-sel odd-btn"'
                              + ' data-event-id="' + String(eid) + '"'
-                             + ' data-market="' + String(m.name || '').replace(/\"/g, '&quot;') + '"'
+                             + ' data-market="' + String(translateMarketTitle(m.name) || '').replace(/\"/g, '&quot;') + '"'
                              + ' data-selection="' + selData.replace(/\"/g, '&quot;') + '"'
                              + ' data-home="' + homeName.replace(/\"/g, '&quot;') + '"'
                              + ' data-away="' + awayName.replace(/\"/g, '&quot;') + '"'
                              + ' data-odds="' + p + '">' + selLabel + ' • ' + p + '</span>';
                     }).join('');
                         return '<div class="market-box">'
-                             +   '<div class="market-title">' + m.name + '</div>'
+                             +   '<div class="market-title">' + translateMarketTitle(m.name) + '</div>'
                              +   '<div class="market-sels">' + selsHtml + '</div>'
                              + '</div>';
                     }).join('');
