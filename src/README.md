@@ -60,150 +60,120 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
 
-## Как на главной формируются «События» и откуда берутся значения
+## Главная страница: ключевая цепочка, маршруты, события и view()
 
-Ниже — краткий, удобочитаемый разбор источников данных и цепочки, по которой «События» появляются на главной странице.
+Ниже — подробный разбор того, как устроена главная страница: какие маршруты задействованы, что такое `events`, как они формируются, и что принимает/возвращает функция `view()`.
 
-### Ключевая цепочка
-- Маршрут `GET /` определён в `routes/web.php` и указывает на `BetController@index`.
-- В `BetController@index` выбираются события и история купонов из базы данных и передаются в представление `resources/views/home.blade.php`.
+### Ключевая цепочка (для главной страницы)
+- Маршрут `GET /` определён в `routes/web.php` и указывает на `BetController@index` — это рендер главной страницы.
+- `BetController@index` читает события и историю купонов из БД, подготавливает вспомогательные структуры и передаёт их в представление `resources/views/home.blade.php`.
 
 ```php
 // routes/web.php
 Route::get('/', [BetController::class, 'index'])->name('home');
+// Дополнительные JSON-эндпоинты для главной страницы
+Route::get('/odds', [OddsController::class, 'odds'])->name('odds.index');
+Route::get('/events/{event}/markets', [OddsController::class, 'markets'])->name('events.markets');
+Route::get('/odds/game/{gameId}', [OddsController::class, 'marketsByGame'])->name('odds.byGame');
 
-// app/Http/Controllers/BetController.php
+// app/Http/Controllers/BetController.php (фрагмент)
 public function index()
 {
-    $events = Event::with('bets')
-        ->orderByDesc('starts_at')
-        ->orderByDesc('id')
-        ->get();
+    $marketsMap = [];
+    $gameIdsMap = [];
+
+    $hasCompetition = Schema::hasColumn('events', 'competition');
+    if ($hasCompetition) {
+        $eventsEpl = Event::with('bets')
+            ->where('competition', 'EPL')
+            ->where('status', 'scheduled')
+            ->where('starts_at', '>', now())
+            ->orderByDesc('starts_at')
+            ->orderByDesc('id')
+            ->limit(12)
+            ->get();
+        $eventsUcl = Event::with('bets')
+            ->where('competition', 'UCL')
+            ->where('status', 'scheduled')
+            ->where('starts_at', '>', now())
+            ->orderByDesc('starts_at')
+            ->orderByDesc('id')
+            ->limit(12)
+            ->get();
+        $eventsIta = Event::with('bets')
+            ->where('competition', 'ITA')
+            ->where('status', 'scheduled')
+            ->where('starts_at', '>', now())
+            ->orderByDesc('starts_at')
+            ->orderByDesc('id')
+            ->limit(12)
+            ->get();
+    } else {
+        // Фоллбэк до применения миграции: показываем все события
+        $eventsEpl = Event::with('bets')
+            ->orderByDesc('starts_at')
+            ->orderByDesc('id')
+            ->get();
+        $eventsUcl = collect();
+        $eventsIta = collect();
+    }
+
+    // Карта event_id -> external_id (для ленивой подгрузки доп. рынков)
+    foreach ([$eventsEpl, $eventsUcl, $eventsIta] as $collection) {
+        foreach ($collection as $ev) {
+            if (!empty($ev->external_id)) {
+                $gameIdsMap[$ev->id] = (string)$ev->external_id;
+            }
+        }
+    }
+
     $coupons = Coupon::with(['bets.event'])->latest()->limit(50)->get();
 
-    return view('home', compact('events', 'coupons'));
+    $leagues = [
+        ['title' => 'Чемпионат Англии (EPL)', 'events' => $eventsEpl],
+        ['title' => 'Лига чемпионов (UCL)', 'events' => $eventsUcl],
+        ['title' => 'Серия А (ITA)', 'events' => $eventsIta],
+    ];
+
+    return view('home', [
+        'leagues' => $leagues,
+        'eventsEpl' => $eventsEpl,
+        'eventsUcl' => $eventsUcl,
+        'eventsIta' => $eventsIta,
+        'coupons' => $coupons,
+        'marketsMap' => $marketsMap,
+        'gameIdsMap' => $gameIdsMap,
+    ]);
 }
 ```
 
-### Что такое «Событие» в базе
-- Таблица `events` создаётся миграциями:
-  - `title`, `starts_at`, `ends_at`, `status` (`scheduled|live|finished`), `result` (`home|draw|away`).
-  - Доп. поля EPL: `home_team`, `away_team`, `home_odds`, `draw_odds`, `away_odds`.
-- Модель: `app/Models/Event.php` — перечисляет `fillable` и приводит типы полей.
+### Что такое `events` и как формируется список
+- `events` — это таблица в БД с данными о матчах. Модель: `app/Models/Event.php`.
+- Основные поля (`fillable` в модели): `title`, `competition`, `starts_at`, `ends_at`, `status`, `result`, `home_team`, `away_team`, `home_odds`, `draw_odds`, `away_odds`, `external_id`.
+- Формирование списка для главной страницы происходит в контроллере: выбираются только «запланированные» матчи будущего (`status = scheduled`, `starts_at > now()`), разнесённые по лигам EPL/UCL/ITA, либо все события, если колонка `competition` ещё не добавлена.
+- Дополнительные рынки (тоталы, форы и т.п.) не хранятся напрямую в `events` — они подгружаются по требованию с внешнего API через маршруты `/events/{event}/markets` или `/odds/game/{gameId}` (см. `OddsController`).
+- Поле `external_id` помогает связать локальное событие с внешним матчем, чтобы по нему запрашивать доп. рынки.
 
 ```php
-// database/migrations/2025_10_24_122358_create_events_table.php
-$table->string('title');
-$table->dateTime('starts_at')->nullable();
-$table->dateTime('ends_at')->nullable();
-$table->enum('status', ['scheduled','live','finished'])->default('scheduled');
-$table->enum('result', ['home','draw','away'])->nullable();
-
-// database/migrations/2025_10_24_122935_add_epl_fields_to_events_table.php
-$table->string('home_team')->nullable();
-$table->string('away_team')->nullable();
-$table->decimal('home_odds', 8, 2)->nullable();
-$table->decimal('draw_odds', 8, 2)->nullable();
-$table->decimal('away_odds', 8, 2)->nullable();
+// app/Models/Event.php (фрагмент)
+protected $fillable = [
+    'title', 'competition', 'starts_at', 'ends_at', 'status', 'result',
+    'home_team', 'away_team', 'home_odds', 'draw_odds', 'away_odds',
+    'external_id',
+];
 ```
 
-### Откуда появляются записи и коэффициенты
-- Команда `epl:sync-odds` наполняет предстоящие матчи и коэффициенты.
-  - Источник команд: **sstats.net** (список команд лиги EPL).
-  - Источник коэффициентов: **sstats.net** (рынок `1x2/Match Odds`, формат `decimal`).
-  - Данные сохраняются в `events` через `updateOrCreate` (если матч уже есть — обновление, иначе — создание).
-  - При недоступности API события не создаются (фоллбэк отключён).
+### Что принимает и что возвращает `view()`
+- `view(string $name, array $data = [])` — вспомогательная функция Laravel, которая принимает:
+  - имя шаблона (`resources/views/{name}.blade.php`),
+  - ассоциативный массив данных для шаблона.
+- Возвращает объект `Illuminate\View\View`, который фреймворк сериализует в HTML-ответ.
+- Все ключи из `$data` становятся доступными в Blade-шаблоне как переменные: например, ключ `leagues` доступен как `{{ $leagues }}`.
+- В нашей главной странице `home.blade.php` используются, среди прочего: `leagues`, `eventsEpl`, `eventsUcl`, `eventsIta`, `coupons`, `gameIdsMap`.
 
-```php
-// app/Console/Commands/SyncEplOdds.php
-Event::updateOrCreate(
-    ['title' => $m['home_team'].' vs '.$m['away_team'], 'starts_at' => $m['commence_time']],
-    [
-        'home_team' => $m['home_team'],
-        'away_team' => $m['away_team'],
-        'status' => 'scheduled',
-        'home_odds' => $m['home_odds'],
-        'draw_odds' => $m['draw_odds'],
-        'away_odds' => $m['away_odds'],
-    ]
-);
-```
+### Итого (для главной страницы)
+- Запрос к `GET /` попадает в `BetController@index`.
+- Контроллер собирает события (events) и купоны, формирует вспомогательные данные (`gameIdsMap` для доп. рынков) и вызывает `view('home', ...)`.
+- Представление `home.blade.php` рендерит карточки матчей, основные коэффициенты и историю купонов, а Vue-компонент `BetSlip.vue` обеспечивает сбор исходов и отправку купона (`POST /bets`).
 
-- Где брать ключи и как запускать:
-  - Установите `SSTATS_API_KEY` и при необходимости `SSTATS_BASE` в `.env` (`services.sstats.*`).
-  - Запуск вручную: `php artisan epl:sync-odds --limit=10`.
-  - Планировщик (`app/Console/Kernel.php`) вызывает `epl:sync-odds` ежедневно в `06:00`.
-
-```php
-// app/Console/Kernel.php
-$schedule->command('epl:sync-odds --limit=10')->dailyAt('06:00');
-```
-
-### Как обновляются результаты завершённых матчей
-- Команда `epl:sync-results` берёт прошедшие матчи из `TheSportsDB` и отмечает локальные события `finished` + выставляет `result` (`home|draw|away`).
-- Параллельно рассчитываются ставки и купоны (победа/проигрыш, выплаты).
-- Запуск вручную: `php artisan epl:sync-results` (окно сопоставления по времени управляется опцией `--window`).
-- Планировщик: каждые 10 минут.
-
-```php
-// app/Console/Commands/SyncEplResults.php
-$ev->status = 'finished';
-$ev->result = $result; // home/draw/away
-$ev->ends_at = $apiTime ?: now();
-$ev->save();
-
-// Расчёт ставок
-$ev->bets()->each(function(Bet $bet) use ($ev) {
-    $win = $bet->selection === $ev->result;
-    $odds = match ($bet->selection) {
-        'home' => $ev->home_odds,
-        'draw' => $ev->draw_odds,
-        'away' => $ev->away_odds,
-    };
-    $bet->is_win = $win;
-    $bet->payout_demo = $win ? ($bet->amount_demo * ($odds ?? 2)) : 0;
-    $bet->settled_at = now();
-    $bet->save();
-});
-```
-
-Дополнительно есть маршрут `GET /events/sync-results` (см. `routes/web.php`) — контроллер `BetController@syncResults` делает похожую синхронизацию результатов и возврат на главную.
-
-### Как это отображается на главной
-- Представление: `resources/views/home.blade.php`.
-- Для каждого события выводятся:
-  - Название матча: `home_team vs away_team` или `title`.
-  - Время начала: `starts_at`.
-  - Коэффициенты: `home_odds / draw_odds / away_odds` под подписью `Коэфф. (П1 / Ничья / П2)`.
-- Клики по коэффициентам (элементы `.odd-btn`) добавляют исходы в купон через Vue-компонент `BetSlip.vue` и отправляют на маршрут `POST /bets`.
-
-```html
-<!-- home.blade.php (фрагмент) -->
-<span class="odd-btn" data-event-id="{{ $ev->id }}" data-selection="home" ...>П1 {{ number_format($h, 2) }}</span>
-<span class="odd-btn" data-event-id="{{ $ev->id }}" data-selection="draw" ...>Ничья {{ number_format($d, 2) }}</span>
-<span class="odd-btn" data-event-id="{{ $ev->id }}" data-selection="away" ...>П2 {{ number_format($a, 2) }}</span>
-```
-
-```js
-// resources/js/components/BetSlip.vue (фрагмент)
-function handleOddClick(e) {
-  const btn = e.target.closest('.odd-btn');
-  if (!btn) return;
-  const eventId = btn.getAttribute('data-event-id');
-  const selection = btn.getAttribute('data-selection');
-  const home = btn.getAttribute('data-home');
-  const away = btn.getAttribute('data-away');
-  const odds = btn.getAttribute('data-odds');
-  addOrReplaceSlipItem({ eventId, home, away, selection, odds });
-}
-```
-
-### Итого: откуда берутся значения
-- Список «Событий» на главной — это записи из БД (`events`), подготовленные командами синхронизации.
-- Команды берут исходные данные из открытых API:
-  - Состав пар команд — `TheSportsDB`.
-  - Коэффициенты — `The Odds API` (усреднение по букмейкерам для рынка `h2h`).
-  - Результаты завершённых матчей — `TheSportsDB`.
-- Представление просто читает эти значения и даёт интерфейс для формирования демо-купона.
-
-Если нужно, могу добавить на страницу отдельный блок «Источник данных» с живым статусом ключей/последней синхронизации.
+Эта логика описывает именно главную страницу: от маршрута до данных, их источников и рендера.

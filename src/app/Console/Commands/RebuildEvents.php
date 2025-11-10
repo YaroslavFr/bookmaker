@@ -91,16 +91,22 @@ class RebuildEvents extends Command
             $this->error('Missing SSTATS_API_KEY; skipping refresh.');
             return self::SUCCESS;
         }
+
         $headers = ['X-API-KEY' => $apiKey, 'Accept' => 'application/json'];
-        $defLeagueIds = [ 'EPL' => 39, 'UCL' => (int) (config('services.sstats.champions_league_id', 2)), 'ITA' => 135 ];
-        $added = 0; $updated = 0;
+        // Карта код -> id из общего конфига
+        $defLeagueIds = [];
+        foreach (config('leagues.leagues') as $code => $info) {
+            $defLeagueIds[$code] = $info['id'] ?? null;
+        }
+        $added = 0; 
+        $updated = 0;
         foreach ($defLeagueIds as $competition => $leagueId) {
             try {
                 $resp = Http::withHeaders($headers)->timeout(10)->get($base.'/games/list', [
                     'LeagueId' => $leagueId,
                     'Year' => (int) date('Y'),
                     'Status' => 2,
-                    'Limit' => 100,
+                    'Limit' => 16,
                 ]);
                 $json = $resp->ok() ? ($resp->json() ?? []) : [];
                 $games = [];

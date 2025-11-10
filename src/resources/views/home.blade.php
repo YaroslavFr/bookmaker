@@ -21,13 +21,7 @@
             </div>
             <div id="mainrow" class="grid grid-cols-1 md:grid-cols-[7fr_3fr] gap-4">
                 <div>
-                @php(
-                    $leagues = isset($leagues) && is_array($leagues) ? $leagues : [
-                        ['title' => 'Чемпионат Англии (EPL)', 'events' => ($eventsEpl ?? [])],
-                        ['title' => 'Лига чемпионов (UCL)', 'events' => ($eventsUcl ?? [])],
-                        ['title' => 'Серия А (ITA)', 'events' => ($eventsIta ?? [])],
-                    ]
-                )
+                @php($leagues = is_array($leagues ?? null) ? $leagues : [])
 
                 @foreach($leagues as $league)
                     @php($events = $league['events'] ?? [])

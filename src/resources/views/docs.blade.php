@@ -11,8 +11,14 @@
         .doc-section { margin-top: 24px; }
         .doc-card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; }
         .doc-card h2 { font-weight: 700; font-size: 18px; margin-bottom: 12px; }
-        .doc-list { list-style: disc; padding-left: 20px; }
-        .doc-code { background: #0b1020; color: #e6edf3; border-radius: 6px; padding: 12px; overflow: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 13px; }
+        .doc-list { list-style: auto; padding-left: 20px; }
+        .doc-code { 
+                margin: 5px 0;
+                background: linear-gradient(135deg, 
+                #001628 0%, 
+                #910b87 100%);
+                color: #e6edf3; border-radius: 6px; padding: 12px; overflow: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 13px; }
+        .doc-list li { margin-bottom: 8px; }
         .doc-kbd { background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 6px; font-family: ui-monospace, monospace; }
         .muted { color: #6b7280; }
         /* Содержание */
@@ -46,26 +52,108 @@
             <section class="doc-section" id="chain">
                 <div class="doc-card">
                     <h2>Ключевая цепочка</h2>
-                    <ul class="doc-list">
-                        <li>Маршрут <code class="doc-kbd">GET /</code> указывает на <code class="doc-kbd">BetController@index</code>.</li>
-                        <li><code class="doc-kbd">index()</code> загружает <code class="doc-kbd">$events</code> и <code class="doc-kbd">$coupons</code> из БД.</li>
-                        <li>Представление: <code class="doc-kbd">resources/views/home.blade.php</code> показывает таблицу событий и купон.</li>
-                        <li>Модель: <code class="doc-kbd">App\Models\Event</code> с полями команд и коэффициентов.</li>
-                    </ul>
+                    <ol class="doc-list">
+                        <li> Мы делаем команду Консольную команда ребилда событий, чтобы события по api из сайта sstats.net загрузились в базу данных
+                            <div class="doc-code"><pre><code>// Консольная команда ребилда событий
+Просто PHP - 
+php artisan events:rebuild
+
+Если через докер - 
+docker compose exec app php artisan events:rebuild
+
+# Опционально: жёсткий ребилд с очисткой таблицы (опасно)
+php artisan events:rebuild --hard
+</code></pre></div> 
+<p>Лиги подтягиваются по ID в массиве в файле RebuildEvents.php</p>
+<div class="doc-code"><pre><code>$defLeagueIds = [ 'EPL' => 39, 'UCL' =>  2, 'ITA' => 135 , 'RUS2' => 236];</code></pre></div>
+</li>
+                        <li>Маршрут <code class="doc-kbd">GET /</code> указывает на <code class="doc-kbd">BetController@index</code> — рендер главной страницы.</li>
+                        <li>Доп. маршруты: <code class="doc-kbd">GET /odds</code>, <code class="doc-kbd">GET /events/{event}/markets</code>, <code class="doc-kbd">GET /odds/game/{gameId}</code>.</li>
+                        <li><code class="doc-kbd">index()</code> собирает ленты EPL/UCL/ITA, карту <code class="doc-kbd">event_id→external_id</code> и историю купонов.</li>
+                        <li>Представление: <code class="doc-kbd">resources/views/home.blade.php</code> показывает матчи, коэффициенты, купоны и купон-форму (Vue).
                     <div class="doc-code"><pre><code>// routes/web.php
 Route::get('/', [BetController::class, 'index'])->name('home');
+Route::get('/odds', [OddsController::class, 'odds'])->name('odds.index');
+Route::get('/events/{event}/markets', [OddsController::class, 'markets'])->name('events.markets');
+Route::get('/odds/game/{gameId}', [OddsController::class, 'marketsByGame'])->name('odds.byGame');
 
-// app/Http/Controllers/BetController.php
+// app/Http/Controllers/BetController.php (фрагмент)
 public function index()
 {
-    $events = Event::with('bets')
-        ->orderByDesc('starts_at')
-        ->orderByDesc('id')
-        ->get();
+    $marketsMap = [];
+    $gameIdsMap = [];
+
+    $hasCompetition = Schema::hasColumn('events', 'competition');
+    if ($hasCompetition) {
+        $eventsEpl = Event::with('bets')
+            ->where('competition', 'EPL')
+            ->where('status', 'scheduled')
+            ->where('starts_at', '>', now())
+            ->orderByDesc('starts_at')
+            ->orderByDesc('id')
+            ->limit(12)
+            ->get();
+        $eventsUcl = Event::with('bets')
+            ->where('competition', 'UCL')
+            ->where('status', 'scheduled')
+            ->where('starts_at', '>', now())
+            ->orderByDesc('starts_at')
+            ->orderByDesc('id')
+            ->limit(12)
+            ->get();
+        $eventsIta = Event::with('bets')
+            ->where('competition', 'ITA')
+            ->where('status', 'scheduled')
+            ->where('starts_at', '>', now())
+            ->orderByDesc('starts_at')
+            ->orderByDesc('id')
+            ->limit(12)
+            ->get();
+    } else {
+        $eventsEpl = Event::with('bets')
+            ->orderByDesc('starts_at')
+            ->orderByDesc('id')
+            ->get();
+        $eventsUcl = collect();
+        $eventsIta = collect();
+    }
+
+    foreach ([$eventsEpl, $eventsUcl, $eventsIta] as $collection) {
+        foreach ($collection as $ev) {
+            if (!empty($ev->external_id)) {
+                $gameIdsMap[$ev->id] = (string)$ev->external_id;
+            }
+        }
+    }
+
     $coupons = Coupon::with(['bets.event'])->latest()->limit(50)->get();
-    return view('home', compact('events', 'coupons'));
+
+    $leagues = [
+        ['title' => 'Чемпионат Англии (EPL)', 'events' => $eventsEpl],
+        ['title' => 'Лига чемпионов (UCL)', 'events' => $eventsUcl],
+        ['title' => 'Серия А (ITA)', 'events' => $eventsIta],
+    ];
+
+    return view('home', [
+        'leagues' => $leagues,
+        'eventsEpl' => $eventsEpl,
+        'eventsUcl' => $eventsUcl,
+        'eventsIta' => $eventsIta,
+        'coupons' => $coupons,
+        'marketsMap' => $marketsMap,
+        'gameIdsMap' => $gameIdsMap,
+    ]);
 }
 </code></pre></div>
+</li>
+</ol>
+                    <h3>Что принимает и возвращает view()</h3>
+                    <ul class="doc-list">
+                        <li><code class="doc-kbd">view(name, data)</code> принимает имя шаблона и массив данных.</li>
+                        <li>Возвращает <code class="doc-kbd">Illuminate\View\View</code>, который преобразуется в HTML.</li>
+                        <li>Ключи массива становятся переменными в Blade: например, <code class="doc-kbd">$leagues</code>, <code class="doc-kbd">$coupons</code>.</li>
+                        <li>Этот блок документирует именно главную страницу.</li>
+                    </ul>
                 </div>
             </section>
 
@@ -200,23 +288,32 @@ $ev->bets()->each(function(Bet $bet) use ($ev) {
                     <h2>Отображение и купон на главной</h2>
                     <ul class="doc-list">
                         <li>В колонке «Коэфф. (П1 / Ничья / П2)» показаны <code class="doc-kbd">home_odds/draw_odds/away_odds</code>.</li>
-                        <li>Клик по коэффициенту добавляет исход в купон (Vue компонент).</li>
-                        <li>Отправка на <code class="doc-kbd">POST /bets</code>, где сохраняются купон и ставки.</li>
+                        <li>Доп. рынки подгружаются по требованию и кнопки имеют <code class="doc-kbd">data-market</code>, <code class="doc-kbd">data-selection</code>, <code class="doc-kbd">data-odds</code>.</li>
+                        <li>Клик по коэффициенту добавляет исход в купон (Vue компонент). Купон поддерживает несколько событий.</li>
+                        <li>Отправка на <code class="doc-kbd">POST /bets</code> массивом <code class="doc-kbd">items</code> — сервер создаёт один купон с несколькими ставками.</li>
                     </ul>
                     @verbatim
-                    <div class="doc-code"><pre><code>&lt;span class="odd-btn" data-event-id="{{ $ev->id }}" data-selection="home"&gt;П1 {{ number_format($h, 2) }}&lt;/span&gt;
+                    <div class="doc-code"><pre><code>&lt;!-- Домашние кэфы 1x2 --&gt;
+&lt;span class="odd-btn" data-event-id="{{ $ev->id }}" data-selection="home" data-odds="{{ number_format($h, 2) }}"&gt;П1 {{ number_format($h, 2) }}&lt;/span&gt;
+
+&lt;!-- Кнопки доп. рынков: есть market, selection, odds --&gt;
+&lt;button class="odd-btn" data-event-id="{{ $ev->id }}" data-market="Тотал 2.5" data-selection="Больше" data-odds="1.90"&gt;Больше 2.5 (1.90)&lt;/button&gt;
 
 // resources/js/components/BetSlip.vue
 function handleOddClick(e) {
   const btn = e.target.closest('.odd-btn');
   if (!btn) return;
   const eventId = btn.getAttribute('data-event-id');
+  const market = btn.getAttribute('data-market');
   const selection = btn.getAttribute('data-selection');
   const home = btn.getAttribute('data-home');
   const away = btn.getAttribute('data-away');
   const odds = btn.getAttribute('data-odds');
-  addOrReplaceSlipItem({ eventId, home, away, selection, odds });
+  addOrReplaceSlipItem({ eventId, home, away, selection, odds, market });
 }
+
+// Купон поддерживает несколько разных событий.
+// Для одного события хранится один выбранный исход; повторный клик обновляет его.
 </code></pre></div>
                     @endverbatim
                 </div>
@@ -229,7 +326,9 @@ function handleOddClick(e) {
                         <li><code class="doc-kbd">SSTATS_API_KEY</code>, <code class="doc-kbd">SSTATS_BASE</code> — sstats.net (коэффициенты).</li>
                         <li>Планировщик: ежедневно <code class="doc-kbd">epl:sync-odds</code> в 06:00; ежечасно <code class="doc-kbd">epl:sync-results</code>.</li>
                         <li>Маршрут быстрого обновления результатов: <code class="doc-kbd">GET /events/sync-results</code>.</li>
+                        <li>Ребилд событий: <code class="doc-kbd">php artisan events:rebuild</code> или <code class="doc-kbd">php artisan events:rebuild --hard</code> (опасно, очищает таблицу).</li>
                     </ul>
+                    
                 </div>
             </section>
 

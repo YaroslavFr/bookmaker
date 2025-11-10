@@ -28,16 +28,14 @@ class StatsController extends Controller
             $nocache = filter_var($request->query('nocache', 'false'), FILTER_VALIDATE_BOOLEAN);
 
             // Лиги для отображения: EPL плюс запрошенные
-            $leagueNames = [
-                39 => 'Английская Премьер-лига',
-                135 => 'Итальянская Серия А',
-                140 => 'Испанская Ла Лига',
-                61 => 'Французская Лига 1',
-                78 => 'Бундеслига',
-                235 => 'Российская Премьер-лига',
-            ];
+            // Формируем карту id -> название из единого конфига
+            $leagueNames = [];
+            foreach (config('leagues.leagues') as $code => $info) {
+                $leagueNames[$info['id']] = $info['title'] ?? $code;
+            }
             $requestedId = $request->query('leagueid');
-            $idsToProcess = $requestedId !== null ? [(int)$requestedId] : [39,135,140,61,78,235];
+            $defaultIds = config('leagues.default_ids', []);
+            $idsToProcess = $requestedId !== null ? [(int)$requestedId] : $defaultIds;
 
             // Загрузка матчей по лиге за последние 120 дней
             $fetch = function(int $leagueId) use ($headers, $base, $year) {

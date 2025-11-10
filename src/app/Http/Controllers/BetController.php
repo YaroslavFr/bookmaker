@@ -19,42 +19,6 @@ class BetController extends Controller
         $marketsMap = [];
         $gameIdsMap = [];
 
-        // Получаем отдельные ленты событий: EPL, UCL, ITA
-        $hasCompetition = Schema::hasColumn('events', 'competition');
-        if ($hasCompetition) {
-            $eventsEpl = Event::with('bets')
-                ->where('competition', 'EPL')
-                ->where('status', 'scheduled')
-                ->where('starts_at', '>', now())
-                ->orderByDesc('starts_at')
-                ->orderByDesc('id')
-                ->limit(12)
-                ->get();
-            $eventsUcl = Event::with('bets')
-                ->where('competition', 'UCL')
-                ->where('status', 'scheduled')
-                ->where('starts_at', '>', now())
-                ->orderByDesc('starts_at')
-                ->orderByDesc('id')
-                ->limit(12)
-                ->get();
-            $eventsIta = Event::with('bets')
-                ->where('competition', 'ITA')
-                ->where('status', 'scheduled')
-                ->where('starts_at', '>', now())
-                ->orderByDesc('starts_at')
-                ->orderByDesc('id')
-                ->limit(12)
-                ->get();
-        } else {
-            // Фоллбэк до применения миграции: показываем все события 
-            $eventsEpl = Event::with('bets')
-                ->orderByDesc('starts_at')
-                ->orderByDesc('id')
-                ->get();
-            $eventsUcl = collect();
-            $eventsIta = collect();
-        }
         // Формируем человекочитаемые заголовки без канонизации: используем "сырые" названия.
         $prepareForView = function ($collection) {
             return $collection->map(function ($ev) {
@@ -66,33 +30,76 @@ class BetController extends Controller
                 return $ev;
             });
         };
-        $eventsEpl = $prepareForView($eventsEpl);
-        $eventsUcl = $prepareForView($eventsUcl);
-        $eventsIta = $prepareForView($eventsIta);
+        
+        // Динамическая загрузка лиг без дублирования: определяем доступные чемпионаты и строим ленты
+        $leagues = [];
+        // Человеческие названия лиг по их кодам (fallback: сам код)
+        // Заголовки лиг по коду берём из общего конфига
+        $leagueTitlesByCode = [];
+        foreach (config('leagues.leagues') as $code => $info) {
+            $leagueTitlesByCode[$code] = $info['title'] ?? $code;
+        }
 
-        // Сформируем карту соответствий event_id -> external_id для ленивой загрузки рынков
-        foreach ([$eventsEpl, $eventsUcl, $eventsIta] as $collection) {
-            foreach ($collection as $ev) {
+        $hasCompetition = Schema::hasColumn('events', 'competition');
+        if ($hasCompetition) {
+            // Получаем список доступных чемпионатов из БД для ближайших запланированных матчей
+            $competitions = Event::query()
+                ->where('status', 'scheduled')
+                ->where('starts_at', '>', now())
+                ->select('competition')
+                ->distinct()
+                ->pluck('competition')
+                ->filter()
+                ->values();
+
+            $eventsByCompetition = [];
+            foreach ($competitions as $comp) {
+                $collection = Event::with('bets')
+                    ->where('competition', $comp)
+                    ->where('status', 'scheduled')
+                    ->where('starts_at', '>', now())
+                    ->orderByDesc('starts_at')
+                    ->orderByDesc('id')
+                    ->limit(12)
+                    ->get();
+                $collection = $prepareForView($collection);
+
+                // Заголовок: человекочитаемое название или сырой код
+                $leagues[] = [
+                    'title' => (string) ($leagueTitlesByCode[(string)$comp] ?? (string)$comp),
+                    'events' => $collection,
+                ];
+
+                // Ассоциативное кеширование лент по коду чемпионата
+                $eventsByCompetition[(string) $comp] = $collection;
+            }
+
+        } else {
+            // Фоллбэк до применения миграции: показываем все события одной лентой
+            $all = Event::with('bets')
+                ->orderByDesc('starts_at')
+                ->orderByDesc('id')
+                ->get();
+            $all = $prepareForView($all);
+            $leagues[] = [
+                'title' => 'События',
+                'events' => $all,
+            ];
+        }
+
+        // Сформируем карту соответствий event_id -> external_id для ленивой загрузки рынков из всех лиг
+        foreach ($leagues as $lg) {
+            foreach ($lg['events'] as $ev) {
                 if (!empty($ev->external_id)) {
-                    $gameIdsMap[$ev->id] = (string)$ev->external_id;
+                    $gameIdsMap[$ev->id] = (string) $ev->external_id;
                 }
             }
         }
 
         $coupons = Coupon::with(['bets.event'])->latest()->limit(50)->get();
 
-        // Структурируем лиги для универсального рендера во вьюхе
-        $leagues = [
-            ['title' => 'Чемпионат Англии (EPL)', 'events' => $eventsEpl],
-            ['title' => 'Лига чемпионов (UCL)', 'events' => $eventsUcl],
-            ['title' => 'Серия А (ITA)', 'events' => $eventsIta],
-        ];
-
         return view('home', [
             'leagues' => $leagues,
-            'eventsEpl' => $eventsEpl,
-            'eventsUcl' => $eventsUcl,
-            'eventsIta' => $eventsIta,
             'coupons' => $coupons,
             'marketsMap' => $marketsMap,
             'gameIdsMap' => $gameIdsMap,
