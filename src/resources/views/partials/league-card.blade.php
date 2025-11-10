@@ -53,7 +53,7 @@
                     </td>
                     <td data-label="Доп. ставки">
                         <button type="button"
-                                class="extra-toggle"
+                                class="extra-toggle cursor-pointer"
                                 title="Доп. ставки"
                                 data-event-id="{{ $ev->id }}"
                                 data-home="{{ $ev->home_team ?? '' }}"

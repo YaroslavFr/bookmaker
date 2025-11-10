@@ -10,6 +10,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
+use Barryvdh\Debugbar\Facades\Debugbar;
 
 class BetController extends Controller
 {
@@ -29,14 +30,14 @@ class BetController extends Controller
                 } catch (\Throwable $e) { /* no-op */ }
                 return $ev;
             });
+            
         };
-        
-        // Динамическая загрузка лиг без дублирования: определяем доступные чемпионаты и строим ленты
+
         $leagues = [];
-        // Человеческие названия лиг по их кодам (fallback: сам код)
         // Заголовки лиг по коду берём из общего конфига
         $leagueTitlesByCode = [];
         foreach (config('leagues.leagues') as $code => $info) {
+            // Формируем человекочитаемый заголовок: используем "title" или сам код, если "title" отсутствует
             $leagueTitlesByCode[$code] = $info['title'] ?? $code;
         }
 
@@ -72,6 +73,8 @@ class BetController extends Controller
 
                 // Ассоциативное кеширование лент по коду чемпионата
                 $eventsByCompetition[(string) $comp] = $collection;
+                // Дебаг через Debugbar: увидеть найденные чемпионаты и их заголовки
+            
             }
 
         } else {
@@ -85,6 +88,15 @@ class BetController extends Controller
                 'title' => 'События',
                 'events' => $all,
             ];
+        }
+
+        if ((string) request()->query('debug') === 'competitions') {
+            // Гарантируем, что панель включена для запроса
+            try { Debugbar::enable(); } catch (\Throwable $e) { /* no-op */ }
+            $titles = [];
+            foreach ($competitions as $comp) {
+                $titles[(string)$comp] = (string) ($leagueTitlesByCode[(string)$comp] ?? (string)$comp);
+            }
         }
 
         // Сформируем карту соответствий event_id -> external_id для ленивой загрузки рынков из всех лиг

@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Спорт КУКОЛД</title>
+    <title>Sport Bets</title>
     <link rel="stylesheet" href="{{ asset('css/bets.css') }}">
     @if (file_exists(public_path('build/manifest.json')))
         @vite(['resources/css/app.css', 'resources/js/app.js'])

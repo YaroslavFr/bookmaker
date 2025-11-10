@@ -33,7 +33,7 @@
     @include('partials.header')
     <main>
         <div class="doc-container">
-            <h1 class="text-2xl font-bold mt-6 mb-2">Как формируются события на главной</h1>
+            <h1 class="text-2xl font-bold mt-6 mb-2">Документация</h1>
             <p class="muted">Наглядное описание источников данных, маршрутов, контроллеров, моделей и синхронизации.</p>
             <div class="doc-toc" aria-label="Содержание">
                 <div class="doc-toc-title">Содержание</div>
@@ -53,21 +53,97 @@
                 <div class="doc-card">
                     <h2>Ключевая цепочка</h2>
                     <ol class="doc-list">
-                        <li> Мы делаем команду Консольную команда ребилда событий, чтобы события по api из сайта sstats.net загрузились в базу данных
-                            <div class="doc-code"><pre><code>// Консольная команда ребилда событий
-Просто PHP - 
-php artisan events:rebuild
-
-Если через докер - 
-docker compose exec app php artisan events:rebuild
-
-# Опционально: жёсткий ребилд с очисткой таблицы (опасно)
-php artisan events:rebuild --hard
-</code></pre></div> 
-<p>Лиги подтягиваются по ID в массиве в файле RebuildEvents.php</p>
-<div class="doc-code"><pre><code>$defLeagueIds = [ 'EPL' => 39, 'UCL' =>  2, 'ITA' => 135 , 'RUS2' => 236];</code></pre></div>
-</li>
                         <li>Маршрут <code class="doc-kbd">GET /</code> указывает на <code class="doc-kbd">BetController@index</code> — рендер главной страницы.</li>
+                        <li> Мы делаем команду Консольную команду ребилда событий, чтобы события по api из сайта sstats.net загрузились в базу данных
+                            <div class="doc-code">
+<pre>
+    <code>// Консольная команда ребилда событий
+        Просто PHP - 
+        php artisan events:rebuild
+
+        Если через докер - 
+        docker compose exec app php artisan events:rebuild
+
+        # Опционально: жёсткий ребилд с очисткой таблицы (опасно)
+        php artisan events:rebuild --hard
+    </code>
+</pre>
+</div> 
+<p>Лиги подтягиваются по ID в массиве в файле src/config/leagues.php</p>
+<div class="doc-code">
+<pre>
+    <code>'leagues' => [
+        'UCL' => ['id' => 2,   'title' => 'Лига чемпионов УЕФА',       'slug' => 'ucl'],
+        'EPL' => ['id' => 39,  'title' => 'Английская Премьер-лига',   'slug' => 'epl'],
+        'FRA' => ['id' => 61,  'title' => 'Французская Лига 1',        'slug' => 'ligue-1'],
+        'GER' => ['id' => 78,  'title' => 'Бундеслига',                'slug' => 'bundesliga'],
+        'ARG' => ['id' => 128, 'title' => 'Аргентинская Премьер-лига', 'slug' => 'primera-division'],
+        'ITA' => ['id' => 135, 'title' => 'Итальянская Серия А',       'slug' => 'serie-a'],
+        'ESP' => ['id' => 140, 'title' => 'Испанская Ла Лига',         'slug' => 'la-liga'],
+        'RUS' => ['id' => 235, 'title' => 'Российская Премьер-лига',   'slug' => 'rpl'],
+        'RUS2'=> ['id' => 236, 'title' => 'Российская Первая лига',    'slug' => 'fnl'],
+    ],
+    </code>
+</pre>    
+<p>И дефолтный набор лиг для агрегированной статистики главной страницы</p>                      
+<pre>
+    <code>$defLeagueIds = [ 'EPL' => 39, 'UCL' =>  2, 'ITA' => 135 , 'RUS2' => 236];</code>
+</pre>
+</div>
+<p class="mt-4">Далее идет $prepareForView, для обработки событий перед отображением на главной странице.</p>
+<p> Делается это с помощью map </p>
+<p>Пример работы map: </p>
+<div class="doc-code">
+<pre>
+    <code>
+$collection = collect([1, 2, 3]);
+
+    $multipliedCollection = $collection->map(function ($item) {
+        return $item * 2;
+    });
+
+    // $multipliedCollection will be collect([2, 4, 6])
+    </code>
+</pre>
+</div>
+<div class="doc-code">
+<pre>
+    <code>
+        $prepareForView = function ($collection) {
+            return $collection->map(function ($ev) {
+                try {
+                    $home = trim((string)($ev->home_team ?? ''));
+                    $away = trim((string)($ev->away_team ?? ''));
+                    $ev->title = ($home !== '' || $away !== '') ? trim($home.' vs '.$away) : ($ev->title ?? '');
+                } catch (\Throwable $e) { /* no-op */ }
+                return $ev;
+            });
+        };
+    </code>
+</pre>
+    </div>
+    <p>И в конце циклом формируем человекочитаемый заголовок для каждой лиги.</p>
+    <div class="doc-code">
+<pre>
+    <code>
+        $leagueTitlesByCode = [];
+        foreach (config('leagues.leagues') as $code => $info) {
+            // $code содержит:
+            // "UCL" например
+
+            // Массив $info содержит:
+            // "id" => 2
+            // "title" => "Лига чемпионов УЕФА"
+            // "slug" => "ucl"
+
+            // Формируем человекочитаемый заголовок: используем "title" или сам код, если "title" отсутствует
+            $leagueTitlesByCode[$code] = $info['title'] ?? $code;
+        }
+    </code>
+</pre>
+    </div>
+                        </li>
+                        
                         <li>Доп. маршруты: <code class="doc-kbd">GET /odds</code>, <code class="doc-kbd">GET /events/{event}/markets</code>, <code class="doc-kbd">GET /odds/game/{gameId}</code>.</li>
                         <li><code class="doc-kbd">index()</code> собирает ленты EPL/UCL/ITA, карту <code class="doc-kbd">event_id→external_id</code> и историю купонов.</li>
                         <li>Представление: <code class="doc-kbd">resources/views/home.blade.php</code> показывает матчи, коэффициенты, купоны и купон-форму (Vue).
