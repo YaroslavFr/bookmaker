@@ -49,6 +49,79 @@
                 </ul>
             </div>
 
+            <div class="doc-global-controls" style="margin: 12px 0; display: flex; gap: 8px; align-items: center;">
+                <button id="doc-expand-all" type="button" class="doc-btn" style="padding:6px 10px; border:1px solid #ccc; background:#f7f7f7; cursor:pointer; border-radius:4px;">Развернуть весь код</button>
+                <button id="doc-collapse-all" type="button" class="doc-btn" style="padding:6px 10px; border:1px solid #ccc; background:#f7f7f7; cursor:pointer; border-radius:4px;">Свернуть весь код</button>
+            </div>
+
+            <style>
+                /* Стили для сворачиваемых блоков кода */
+                .doc-code { margin-top: 8px; }
+                .doc-code.collapsed { 
+                    max-height: 80px;
+                    overflow: hidden;
+                }
+                .doc-code-toggle {
+                    padding: 6px 10px;
+                    border: 1px solid #ccc;
+                    background: #f7f7f7;
+                    cursor: pointer;
+                    border-radius: 4px;
+                    font-size: 13px;
+                    margin: 6px 0 0;
+                    display: block;
+                    margin: 15px 0;
+                }
+                .doc-code-toggle + .doc-code { margin-top: 6px; }
+            </style>
+
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                    const codeBlocks = Array.from(document.querySelectorAll('.doc-code'));
+                    // Вставляем кнопку перед каждым блоком .doc-code и сворачиваем по умолчанию
+                    codeBlocks.forEach(function (block, idx) {
+                        block.classList.add('collapsed');
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'doc-code-toggle';
+                        btn.setAttribute('aria-controls', 'doc-code-' + idx);
+                        btn.setAttribute('aria-expanded', 'false');
+                        btn.textContent = 'Показать код';
+                        // Присвоим id блоку для ARIA
+                        if (!block.id) block.id = 'doc-code-' + idx;
+                        btn.addEventListener('click', function () {
+                            const collapsed = block.classList.toggle('collapsed');
+                            const isCollapsed = block.classList.contains('collapsed');
+                            btn.setAttribute('aria-expanded', (!isCollapsed).toString());
+                            btn.textContent = isCollapsed ? 'Показать код' : 'Скрыть код';
+                        });
+                        block.parentNode.insertBefore(btn, block);
+                    });
+
+                    // Глобальные кнопки
+                    const expandAllBtn = document.getElementById('doc-expand-all');
+                    const collapseAllBtn = document.getElementById('doc-collapse-all');
+                    if (expandAllBtn) {
+                        expandAllBtn.addEventListener('click', function () {
+                            codeBlocks.forEach(function (block) { block.classList.remove('collapsed'); });
+                            document.querySelectorAll('.doc-code-toggle').forEach(function (btn) {
+                                btn.setAttribute('aria-expanded', 'true');
+                                btn.textContent = 'Скрыть код';
+                            });
+                        });
+                    }
+                    if (collapseAllBtn) {
+                        collapseAllBtn.addEventListener('click', function () {
+                            codeBlocks.forEach(function (block) { block.classList.add('collapsed'); });
+                            document.querySelectorAll('.doc-code-toggle').forEach(function (btn) {
+                                btn.setAttribute('aria-expanded', 'false');
+                                btn.textContent = 'Показать код';
+                            });
+                        });
+                    }
+                });
+            </script>
+
             <section class="doc-section" id="chain">
                 <div class="doc-card">
                     <h2>Ключевая цепочка</h2>
@@ -158,41 +231,6 @@ public function index()
 {
     $marketsMap = [];
     $gameIdsMap = [];
-
-    $hasCompetition = Schema::hasColumn('events', 'competition');
-    if ($hasCompetition) {
-        $eventsEpl = Event::with('bets')
-            ->where('competition', 'EPL')
-            ->where('status', 'scheduled')
-            ->where('starts_at', '>', now())
-            ->orderByDesc('starts_at')
-            ->orderByDesc('id')
-            ->limit(12)
-            ->get();
-        $eventsUcl = Event::with('bets')
-            ->where('competition', 'UCL')
-            ->where('status', 'scheduled')
-            ->where('starts_at', '>', now())
-            ->orderByDesc('starts_at')
-            ->orderByDesc('id')
-            ->limit(12)
-            ->get();
-        $eventsIta = Event::with('bets')
-            ->where('competition', 'ITA')
-            ->where('status', 'scheduled')
-            ->where('starts_at', '>', now())
-            ->orderByDesc('starts_at')
-            ->orderByDesc('id')
-            ->limit(12)
-            ->get();
-    } else {
-        $eventsEpl = Event::with('bets')
-            ->orderByDesc('starts_at')
-            ->orderByDesc('id')
-            ->get();
-        $eventsUcl = collect();
-        $eventsIta = collect();
-    }
 
     foreach ([$eventsEpl, $eventsUcl, $eventsIta] as $collection) {
         foreach ($collection as $ev) {

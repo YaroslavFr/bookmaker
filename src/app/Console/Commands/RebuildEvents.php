@@ -84,9 +84,14 @@ class RebuildEvents extends Command
             $this->info("Removed duplicates: {$removed}");
         }
 
-        // Refresh upcoming events via API (EPL, UCL, ITA)
+        // Refresh upcoming events via API (EPL, UCL, ITA и т.д.)
         $base = rtrim(config('services.sstats.base_url', 'https://api.sstats.net'), '/');
         $apiKey = config('services.sstats.key');
+        // Генерация тестовой лиги независимо от наличия API‑ключа
+        if (env('TEST_LEAGUE', false)) {
+            [$addedTest, $updatedTest] = $this->generateTestEvents();
+            $this->info("TEST league generated. Added: {$addedTest}, Updated: {$updatedTest}");
+        }
         if (!$apiKey) {
             $this->error('Missing SSTATS_API_KEY; skipping refresh.');
             return self::SUCCESS;
@@ -101,6 +106,8 @@ class RebuildEvents extends Command
         $added = 0; 
         $updated = 0;
         foreach ($defLeagueIds as $competition => $leagueId) {
+            // Пропускаем HTTP‑обновление для тестовой лиги — она генерируется локально
+            if ($competition === 'TEST') { continue; }
             try {
                 $resp = Http::withHeaders($headers)->timeout(10)->get($base.'/games/list', [
                     'LeagueId' => $leagueId,
@@ -127,6 +134,7 @@ class RebuildEvents extends Command
                 foreach ($games as $g) {
                     $homeName = data_get($g, 'homeTeam.name') ?? data_get($g, 'home.name') ?? data_get($g, 'home') ?? data_get($g, 'Home');
                     $awayName = data_get($g, 'awayTeam.name') ?? data_get($g, 'away.name') ?? data_get($g, 'away') ?? data_get($g, 'Away');
+                    
                     if (!$homeName || !$awayName) continue;
                     $gameId = data_get($g, 'id') ?? data_get($g, 'game.id') ?? data_get($g, 'GameId') ?? data_get($g, 'gameid') ?? null;
                     if (!$gameId) continue;
@@ -156,6 +164,7 @@ class RebuildEvents extends Command
                             'away_odds' => (float)$a,
                         ]
                     );
+                    
                     if ($existing) { $updated++; } else { $added++; }
                 }
             } catch (\Throwable $e) {
@@ -165,6 +174,45 @@ class RebuildEvents extends Command
 
         $this->info("Refresh complete. Added: {$added}, Updated: {$updated}");
         return self::SUCCESS;
+    }
+
+    /**
+     * Генерация тестовых событий в «Тестовой лиге» с фиксированными командами и коэффициентами.
+     * Возвращает [added, updated].
+     */
+    private function generateTestEvents(int $count = 6): array
+    {
+        $added = 0; $updated = 0;
+        $now = Carbon::now();
+        for ($i = 1; $i <= $count; $i++) {
+            $homeName = 'Тестовая команда '.$i;
+            $awayName = 'Тестовая команда '.($i + 1);
+            $dt = $now->copy()->addHours($i)->second(0)->micro(0);
+            // Простая шкала коэффициентов
+            $home = round(1.80 + 0.05 * $i, 2);
+            $draw = round(3.20 + 0.05 * $i, 2);
+            $away = round(4.00 + 0.10 * $i, 2);
+            $extId = 'test:'.$i;
+            $title = trim($homeName.' vs '.$awayName);
+
+            $existing = Event::where('external_id', (string)$extId)->first();
+            Event::updateOrCreate(
+                [ 'external_id' => (string)$extId ],
+                [
+                    'competition' => 'TEST',
+                    'title' => $title,
+                    'status' => 'scheduled',
+                    'home_team' => (string)$homeName,
+                    'away_team' => (string)$awayName,
+                    'starts_at' => $dt,
+                    'home_odds' => (float)$home,
+                    'draw_odds' => (float)$draw,
+                    'away_odds' => (float)$away,
+                ]
+            );
+            if ($existing) { $updated++; } else { $added++; }
+        }
+        return [$added, $updated];
     }
 
     private function extractInlineOdds(array $game): array
