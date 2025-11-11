@@ -1,0 +1,103 @@
+{
+  "status": "OK",
+  "count": 1,
+  "data": [
+    {
+      "id": 1383044,
+      "flashId": "0dpjEhy9",
+      "date": "2025-08-02T14:00:00+00:00",
+      "dateUtc": 1754143200,
+      "status": 8,
+      "periods": [
+        "2025-08-02T14:00:00+00:00",
+        "2025-08-02T15:00:00+00:00"
+      ],
+      "statusName": "Finished",
+      "elapsed": 90,
+      "extraMinutes": 5,
+      "homeResult": 1,
+      "awayResult": 2,
+      "homeHTResult": 1,
+      "awayHTResult": 1,
+      "homeFTResult": 1,
+      "awayFTResult": 2,
+      "homeTeam": {
+        "id": 6784,
+        "name": "Stenhousemuir",
+        "flashId": null,
+        "country": { "code": "GB-SCT", "name": "Scotland" }
+      },
+      "awayTeam": {
+        "id": 1391,
+        "name": "Alloa Athletic",
+        "flashId": null,
+        "country": { "code": "GB-SCT", "name": "Scotland" }
+      },
+      "season": {
+        "uid": "46383a3a-50bf-11f0-9829-3cecef730a49",
+        "year": 2025,
+        "league": {
+          "id": 183,
+          "name": "League One",
+          "country": { "code": "GB-SCT", "name": "Scotland" },
+          "flashScoreId": "england/league-one"
+        }
+      },
+      "roundName": "Regular Season - 1",
+      "odds": [
+        {
+          "marketId": 1,
+          "marketName": null,
+          "odds": [
+            { "name": "Home", "value": 3.18, "openingValue": null },
+            { "name": "Away", "value": 2.16, "openingValue": null },
+            { "name": "Draw", "value": 3.33, "openingValue": null }
+          ]
+        },
+        {
+          "marketId": 2,
+          "marketName": null,
+          "odds": [
+            { "name": "Home", "value": 2.34, "openingValue": null },
+            { "name": "Away", "value": 1.58, "openingValue": null }
+          ]
+        },
+        {
+          "marketId": 12,
+          "marketName": null,
+          "odds": [
+            { "name": "Home/Draw", "value": 1.68, "openingValue": null },
+            { "name": "Home/Away", "value": 1.32, "openingValue": null },
+            { "name": "Draw/Away", "value": 1.35, "openingValue": null }
+          ]
+        },
+        {
+          "marketId": 5,
+          "marketName": null,
+          "odds": [
+            { "name": "Over 2.5", "value": 1.86, "openingValue": null },
+            { "name": "Under 2.5", "value": 1.93, "openingValue": null }
+          ]
+        },
+        {
+          "marketId": 16,
+          "marketName": null,
+          "odds": [
+            { "name": "Over 1.5", "value": 2.74, "openingValue": null },
+            { "name": "Under 1.5", "value": 1.44, "openingValue": null }
+          ]
+        },
+        {
+          "marketId": 17,
+          "marketName": null,
+          "odds": [
+            { "name": "Over 1.5", "value": 2.09, "openingValue": null },
+            { "name": "Under 1.5", "value": 1.71, "openingValue": null }
+          ]
+        }
+      ]
+    }
+  ],
+  "offset": 0,
+  "traceId": "00-ecb289a141924200ef5aef4cfd5a9a15-8e884375700f8514-00"
+}
