@@ -50,9 +50,11 @@ body {
   width: calc(100% - 40px);
   padding: 0 20px;
 }
-main{
-  padding-bottom:50px;
+
+main {
+  padding-bottom: 50px;
 }
+
 .grid {
   display: grid;
   gap: 20px;
@@ -154,6 +156,51 @@ td {
   width: 100%;
 }
 
+.coupons-block{
+  padding: 16px 0;
+}
+
+/* Div-based responsive table (rt) */
+.rt {
+  width: 100%;
+  display: block;
+}
+
+.rt-head,
+.rt-row {
+  padding: 8px 15px;
+  display: grid;
+  grid-template-columns: 1.1fr 1fr 3fr 0.8fr 0.9fr 1fr 0.9fr 1.1fr;
+  border-bottom: 1px solid #eee;
+}
+.rt-row:nth-child(even) {
+  background: #7584fb08;
+}
+
+
+.rt-head {
+  background: #f8fafc;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #64748b;
+}
+
+.rt-th,
+.rt-cell {
+  
+  padding: 2px;
+  text-align: left;
+}
+
+.rt-row:hover {
+  background: #f9fafb;
+}
+
+.rt-body .rt-row:last-child .rt-cell {
+  border-bottom: 0;
+}
+
 .odd-btn {
   display: inline-block;
   padding: 2px 6px;
@@ -205,30 +252,109 @@ td {
   filter: brightness(0.95);
 }
 
-.line tr:last-child td{
-            border-bottom:0;
-        }
-        .line td{
-            padding:3px 2px;
-        }
-        .muted { color: #6b7280; font-size: 12px; }
-        .wrap { word-break: break-word; }
-        .collapsible .collapse-toggle { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 14px; padding: 6px 10px; }
-        .collapsible .arrow { font-size: 16px; line-height: 1; }
-        .collapsible.is-collapsed .collapsible-body { display: none; }
-        .row-between { display: flex; align-items: center; justify-content: space-between; }
-        .card-header { margin-bottom: 8px; }
-        .teams-row {font-size: 14px; display: inline-flex; align-items: center; gap: 10px; }
-        .team-name { font-weight: 600; }
-        .vs-sep { color: #6b7280; }
-        .event-sub { margin-top: 4px; font-size: 12px; color: #6b7280; }
-        .extra-row { background: #f9fafb; }
-        .extra-markets { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 8px; }
-        .market-box { border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px; background: #fff; }
-        .market-title { font-weight: 600; margin-bottom: 6px; }
-        .market-sels { display: flex; flex-wrap: wrap; gap: 6px; }
-        .market-sel { font-size: 13px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; background: #f3f4f6; }
-        
+.line tr:last-child td {
+  border-bottom: 0;
+}
+
+.line td {
+  padding: 3px 2px;
+}
+
+.muted {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.wrap {
+  word-break: break-word;
+}
+
+.collapsible .collapse-toggle {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  padding: 6px 10px;
+}
+
+.collapsible .arrow {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.collapsible.is-collapsed .collapsible-body {
+  display: none;
+}
+
+.row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-header {
+  margin-bottom: 8px;
+}
+
+.teams-row {
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.team-name {
+  font-weight: 600;
+}
+
+.vs-sep {
+  color: #6b7280;
+}
+
+.event-sub {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.extra-row {
+  background: #f9fafb;
+}
+
+.extra-markets {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.market-box {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 8px;
+  background: #fff;
+}
+
+.market-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.market-sels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.market-sel {
+  font-size: 13px;
+  padding: 4px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #f3f4f6;
+}
+
 /* Table header polish */
 table thead th {
   background: #f8fafc;
@@ -301,7 +427,7 @@ nav a[aria-current="page"] {
 }
 
 .slip-item {
-  padding: 6px 0;
+  padding: 6px 0 12px;
   border-bottom: 1px solid #eee;
 }
 
@@ -311,19 +437,20 @@ nav a[aria-current="page"] {
     grid-template-columns: 1fr;
   }
 
-  .responsive-table thead {
+  /* rt mobile behavior mirrors the old table-based responsive layout */
+  .rt-head {
     display: none;
   }
 
-  .responsive-table tr {
-    display: block;
+  .rt-row {
+    grid-template-columns: 1fr;
     border: 1px solid #eee;
     border-radius: 8px;
     padding: 10px;
     margin-bottom: 12px;
   }
 
-  .responsive-table td {
+  .rt-cell {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
@@ -331,7 +458,7 @@ nav a[aria-current="page"] {
     padding: 6px 0;
   }
 
-  .responsive-table td::before {
+  .rt-cell::before {
     content: attr(data-label);
     font-size: 12px;
     color: #666;

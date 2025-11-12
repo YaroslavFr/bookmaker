@@ -21,19 +21,19 @@
         </div>
       </div>
       
-      <div class="row row-start">
+      <div class="row row-start flex-col">
         <div class="form-label">Купон</div>
-        <div>
+        <div class="w-full">
         <ul id="slip-list">
           <li v-for="item in slip" :key="item.eventId" class="slip-item">
             <div class="row row-between">
-            <div>
-              <div>
-                <strong>{{ item.home && item.away ? `${item.home} vs ${item.away}` : `Event #${item.eventId}` }}</strong>
-                <div class="muted">Исход: <span v-if="item.market" class="market-title">{{ item.market }}</span><span v-if="item.market"> — </span><span class="market-sel">{{ selectionLabel(item.selection, item.home, item.away) }}</span> • кэф <span class="text-orange-400 text-base">{{ item.odds }}</span></div>
+              <div class="w-full flex justify-between items-start">
+                <div>
+                  <strong>{{ item.home && item.away ? `${item.home} vs ${item.away}` : `Event #${item.eventId}` }}</strong>
+                  <div class="muted">Исход: <span v-if="item.market" class="market-title">{{ item.market }}</span><span v-if="item.market"> — </span><span class="market-sel">{{ selectionLabel(item.selection, item.home, item.away) }}</span> • кэф <span class="text-orange-400 text-base">{{ item.odds }}</span></div>
+                </div>
+                <button class="font-bold" type="button" @click="removeItem(item.eventId)">X</button>
               </div>
-              <button class="" type="button" @click="removeItem(item.eventId)">X</button>
-            </div>
             </div>
           </li>
         </ul>

@@ -34,7 +34,7 @@
                     @endif
                 @endforeach
                 </div>
-            <div class="card mt-20">
+            <div class="card mt-20 ">
                 <div id="vue-app"
                      data-csrf="{{ csrf_token() }}"
                      data-post-url="{{ route('bets.store') }}"
@@ -43,30 +43,29 @@
             </div>
             </div>
             @php($coupons = $coupons ?? [])
-            <div class="card mt-20">
-                <h2>Последние ставки (купоны)</h2>
+            <div class="card mt-20 coupons-block">
+                <h2 class="px-4 pl-8">Последние ставки (купоны)</h2>
                 @if(empty($coupons))
                     <p class="muted">История ставок пуста.</p>
                 @else
-                <table class="responsive-table">
-                    <thead>
-                        <tr>
-                            <th>Купон ID</th>
-                            <th>Игрок</th>
-                            <th>События (экспресс)</th>
-                            <th>Сумма</th>
-                            <th>Итоговый кэф</th>
-                            <th>Потенц. выплата</th>
-                            <th>Статус</th>
-                            <th>Дата ставки</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+                <div class="responsive-table rt rt--coupons">
+                    <div class="rt-head">
+                        <div class="rt-th">Купон ID</div>
+                        <div class="rt-th">Игрок</div>
+                        <div class="rt-th">События (экспресс)</div>
+                        <div class="rt-th">Сумма</div>
+                        <div class="rt-th">Итоговый кэф</div>
+                        <div class="rt-th">Потенц. выплата</div>
+                        <div class="rt-th">Статус</div>
+                        <div class="rt-th">Дата ставки</div>
+                    </div>
+                    <div class="rt-body">
                         @foreach($coupons as $coupon)
-                            <tr>
-                                <td>{{ $coupon->id }}</td>
-                                <td>{{ $coupon->bettor_name }}</td>
-                                    <td>
+                            @php($potential = ($coupon->total_odds && $coupon->amount_demo) ? ($coupon->amount_demo * $coupon->total_odds) : null)
+                            <div class="rt-row">
+                                <div class="rt-cell" data-label="Купон ID">{{ $coupon->id }}</div>
+                                <div class="rt-cell" data-label="Игрок">{{ $coupon->bettor_name }}</div>
+                                <div class="rt-cell" data-label="События (экспресс)">
                                     @foreach($coupon->bets as $l)
                                         @php($selMap = ['home' => 'П1', 'draw' => 'Ничья', 'away' => 'П2'])
                                         @php($selKey = strtolower(trim($l->selection)))
@@ -77,28 +76,30 @@
                                             default => null,
                                         } : null))
                                         <div class="mb-2 text-sm">
+                                            <div class="font-bold">
                                             @if($l->event && $l->event->home_team && $l->event->away_team)
                                                 {{ $l->event->home_team }} vs {{ $l->event->away_team }}
                                             @else
                                                 {{ $l->event->title ?? ('Event #'.$l->event_id) }}
                                             @endif
-                                            — {{ $selMap[$selKey] ?? $l->selection }}
+                                            </div>
+                                            <div>Ставка - <span class="font-medium">{{ $selMap[$selKey] ?? $l->selection }}</span>
                                             @if($placedOdds)
                                                 <span class="muted">(кэф.: <span class="text-orange-400 text-base">{{ number_format($placedOdds, 2) }}</span>)</span>
                                             @endif
+                                            </div>
                                         </div>
                                     @endforeach
-                                    </td>
-                                <td>{{ $coupon->amount_demo ? number_format($coupon->amount_demo, 2) : '—' }}</td>
-                                <td>{{ $coupon->total_odds ? number_format($coupon->total_odds, 2) : '—' }}</td>
-                                @php($potential = ($coupon->total_odds && $coupon->amount_demo) ? ($coupon->amount_demo * $coupon->total_odds) : null)
-                                <td>{{ $potential ? number_format($potential, 2) : '—' }}</td>
-                                <td>{{ $coupon->is_win === null ? '—' : ($coupon->is_win ? 'Выиграно' : 'Проигрыш') }}</td>
-                                <td>{{ $coupon->created_at ? $coupon->created_at->format('Y-m-d H:i') : '—' }}</td>
-                            </tr>
+                                </div>
+                                <div class="rt-cell" data-label="Сумма">{{ $coupon->amount_demo ? number_format($coupon->amount_demo, 2) : '—' }}</div>
+                                <div class="rt-cell" data-label="Итоговый кэф">{{ $coupon->total_odds ? number_format($coupon->total_odds, 2) : '—' }}</div>
+                                <div class="rt-cell" data-label="Потенц. выплата">{{ $potential ? number_format($potential, 2) : '—' }}</div>
+                                <div class="rt-cell" data-label="Статус">{{ $coupon->is_win === null ? '—' : ($coupon->is_win ? 'Выиграно' : 'Проигрыш') }}</div>
+                                <div class="rt-cell" data-label="Дата ставки">{{ $coupon->created_at ? $coupon->created_at->format('Y-m-d H:i') : '—' }}</div>
+                            </div>
                         @endforeach
-                    </tbody>
-                </table>
+                    </div>
+                </div>
                 @endif
             </div>
 
