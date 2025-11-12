@@ -169,7 +169,7 @@
 <div class="doc-code">
 <pre>
     <code>
-$collection = collect([1, 2, 3]);
+    $collection = collect([1, 2, 3]);
 
     $multipliedCollection = $collection->map(function ($item) {
         return $item * 2;

@@ -73,7 +73,6 @@ class BetController extends Controller
 
                 // Ассоциативное кеширование лент по коду чемпионата
                 $eventsByCompetition[(string) $comp] = $collection;
-                // Дебаг через Debugbar: увидеть найденные чемпионаты и их заголовки
             
             }
 
@@ -168,11 +167,29 @@ class BetController extends Controller
 
         // Create legs as Bet rows linked to the coupon
         foreach ($data['items'] as $item) {
+            $sel = (string) ($item['selection'] ?? '');
+            $placedOdds = null;
+            if (in_array($sel, ['home','draw','away'], true)) {
+                // Основной рынок 1x2: берём кэфы из события
+                $ev = Event::find($item['event_id']);
+                if ($ev) {
+                    $placedOdds = match ($sel) {
+                        'home' => $ev->home_odds,
+                        'draw' => $ev->draw_odds,
+                        'away' => $ev->away_odds,
+                    };
+                }
+            } else {
+                // Доп. рынок: используем переданный коэффициент
+                $od = $item['odds'] ?? null;
+                if (is_numeric($od)) { $placedOdds = (float) $od; }
+            }
             Bet::create([
                 'event_id' => $item['event_id'],
                 'bettor_name' => $bettorName,
                 'amount_demo' => $data['amount_demo'],
-                'selection' => $item['selection'],
+                'selection' => $sel,
+                'placed_odds' => $placedOdds,
                 'coupon_id' => $coupon->id,
             ]);
         }

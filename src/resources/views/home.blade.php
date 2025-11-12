@@ -70,12 +70,12 @@
                                     @foreach($coupon->bets as $l)
                                         @php($selMap = ['home' => 'П1', 'draw' => 'Ничья', 'away' => 'П2'])
                                         @php($selKey = strtolower(trim($l->selection)))
-                                        @php($placedOdds = $l->event ? match($selKey) {
+                                        @php($placedOdds = $l->placed_odds ?? ($l->event ? match($selKey) {
                                             'home' => $l->event->home_odds,
                                             'draw' => $l->event->draw_odds,
                                             'away' => $l->event->away_odds,
                                             default => null,
-                                        } : null)
+                                        } : null))
                                         <div class="mb-2 text-sm">
                                             @if($l->event && $l->event->home_team && $l->event->away_team)
                                                 {{ $l->event->home_team }} vs {{ $l->event->away_team }}

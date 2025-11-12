@@ -25,7 +25,7 @@
                         @endif
                     </td>
                     <td class="text-sm muted" data-label="Дата/время">
-                        {{ $ev->starts_at ? $ev->starts_at->format('d.m.Y H:i') : '—' }}
+                        {{ $ev->starts_at ? $ev->starts_at->copy()->tz(config('app.timezone'))->format('d.m.Y H:i') : '—' }}
                     </td>
                     <td data-label="Коэфф. (Д/Н/Г)">
                         @php($h = $ev->home_odds)

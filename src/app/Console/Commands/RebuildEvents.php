@@ -131,10 +131,11 @@ class RebuildEvents extends Command
                     }
                 }
                 $now = Carbon::now();
+                
                 foreach ($games as $g) {
                     $homeName = data_get($g, 'homeTeam.name') ?? data_get($g, 'home.name') ?? data_get($g, 'home') ?? data_get($g, 'Home');
                     $awayName = data_get($g, 'awayTeam.name') ?? data_get($g, 'away.name') ?? data_get($g, 'away') ?? data_get($g, 'Away');
-                    
+                    $this->info("homeName: {$homeName} awayName {$awayName}");
                     if (!$homeName || !$awayName) continue;
                     $gameId = data_get($g, 'id') ?? data_get($g, 'game.id') ?? data_get($g, 'GameId') ?? data_get($g, 'gameid') ?? null;
                     if (!$gameId) continue;
@@ -150,6 +151,7 @@ class RebuildEvents extends Command
                     if (!is_numeric($h) || !is_numeric($d) || !is_numeric($a)) continue;
                     $title = trim((string)$homeName.' vs '.(string)$awayName);
                     $existing = Event::where('external_id', (string)$gameId)->first();
+                    
                     $event = Event::updateOrCreate(
                         [ 'external_id' => (string)$gameId ],
                         [

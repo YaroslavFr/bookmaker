@@ -9,6 +9,7 @@ use App\Models\Event;              // Модель Eloquent для таблиц�
 use Illuminate\Console\Command;    // Базовый класс для Artisan-команды
 use Illuminate\Support\Facades\Http; // HTTP‑клиент Laravel для внешних запросов
 use Illuminate\Support\Str;        // Утилита для работы со строками
+use Carbon\Carbon;                 // Работа с датами/временем
 
 // Класс команды. Имя файла и класса совпадает по PSR‑4 автозагрузке
 class SyncEplOdds extends Command
@@ -46,9 +47,12 @@ class SyncEplOdds extends Command
             foreach ($matches as $m) {
                 // Формируем заголовок матча: «Команда A vs Команда B»
                 $title = $m['home_team'].' vs '.$m['away_team'];
+                // Нормализуем время начала матча в UTC
+                $commenceRaw = $m['commence_time'] ?? null;
+                $commence = $commenceRaw ? Carbon::parse($commenceRaw)->utc()->second(0)->micro(0) : null;
                 $event = Event::updateOrCreate(
                     // Критерии уникальности: title + starts_at
-                    ['title' => $title, 'starts_at' => $m['commence_time']],
+                    ['title' => $title, 'starts_at' => $commence],
                     [
                         // Поля для отображения и расчёта ставок
                         'home_team' => $m['home_team'],
