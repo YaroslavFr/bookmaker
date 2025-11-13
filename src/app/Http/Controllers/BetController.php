@@ -132,6 +132,7 @@ class BetController extends Controller
             'items.*.selection' => ['required', 'string', 'max:100'],
             // Для доп. рынков принимаем кэф с клиента (необязательный)
             'items.*.odds' => ['nullable', 'numeric', 'min:0.01'],
+            'items.*.market' => ['nullable', 'string', 'max:100'],
         ]);
 
         // Определяем имя игрока: для авторизованного — username, иначе — из формы
@@ -226,6 +227,7 @@ class BetController extends Controller
                 'selection' => $sel,
                 'placed_odds' => $placedOdds,
                 'coupon_id' => $coupon->id,
+                'market' => $item['market'] ?? null,
             ]);
         }
 
@@ -249,6 +251,7 @@ class BetController extends Controller
                         ],
                         'selection' => (string) $b->selection,
                         'placed_odds' => $b->placed_odds !== null ? (float) $b->placed_odds : null,
+                        'market' => $b->market ?? null,
                     ];
                 }
                 $evTimes = collect($full->bets ?? [])

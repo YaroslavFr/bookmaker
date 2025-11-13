@@ -10,7 +10,7 @@ class Bet extends Model
     use HasFactory;
 
     protected $fillable = [
-        'event_id', 'bettor_name', 'amount_demo', 'selection', 'placed_odds', 'is_win', 'payout_demo', 'settled_at', 'coupon_id'
+        'event_id', 'bettor_name', 'amount_demo', 'selection', 'placed_odds', 'is_win', 'payout_demo', 'settled_at', 'coupon_id', 'market'
     ];
 
     protected $casts = [

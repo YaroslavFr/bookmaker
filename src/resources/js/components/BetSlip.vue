@@ -268,9 +268,11 @@ function renderCouponRow(c) {
     const sk = String(l.selection || '').trim().toLowerCase()
     const placed = (typeof l.placed_odds === 'number') ? l.placed_odds : null
     const oddsHtml = placed !== null ? `<span class="muted">(кэф.: <span class="text-orange-400 text-base">${format2(placed)}</span>)</span>` : ''
+    const market = l.market ? String(l.market) : ''
+    const marketHtml = market ? `<span class="market-title">${market}</span> — ` : ''
     eventsHtml += `<div class="mb-2 text-sm">
       <div class="font-bold">${title}</div>
-      <div>Ставка - <span class="font-medium">${selMap[sk] || l.selection}</span> ${oddsHtml}</div>
+      <div>Ставка - ${marketHtml}<span class="font-medium">${selMap[sk] || l.selection}</span> ${oddsHtml}</div>
     </div>`
   })
   const statusText = (c.is_win === null || typeof c.is_win === 'undefined') ? 'Не рассчитано' : (c.is_win ? 'Выиграно' : 'Проигрыш')

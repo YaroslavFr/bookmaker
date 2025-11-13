@@ -89,7 +89,7 @@
                                                 {{ $l->event->title ?? ('Event #'.$l->event_id) }}
                                             @endif
                                             </div>
-                                            <div>Ставка - <span class="font-medium">{{ $selMap[$selKey] ?? $l->selection }}</span>
+                                            <div>Ставка - @if(!empty($l->market))<span class="market-title">{{ $l->market }}</span> — @endif<span class="font-medium">{{ $selMap[$selKey] ?? $l->selection }}</span>
                                             @if($placedOdds)
                                                 <span class="muted">(кэф.: <span class="text-orange-400 text-base">{{ number_format($placedOdds, 2) }}</span>)</span>
                                             @endif
