@@ -67,7 +67,7 @@
                                 ->filter(function($b){ return $b && $b->event && $b->event->starts_at; })
                                 ->map(function($b){ return $b->event->starts_at; }))
                             @php($latestStart = $evTimes->max())
-                            @php($settlementAt = $latestStart ? $latestStart->copy()->addMinutes(120)->setTimezone(config('app.timezone')) : null)
+                            @php($settlementAt = $latestStart ? $latestStart->copy()->addMinutes(120)->setTimezone('Europe/Moscow') : null)
                             <div class="rt-row">
                                 <div class="rt-cell" data-label="Купон ID">{{ $coupon->id }}</div>
                                 <div class="rt-cell" data-label="Игрок">{{ $coupon->bettor_name }}</div>

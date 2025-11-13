@@ -48,7 +48,7 @@ class BetController extends Controller
             // Получаем список доступных чемпионатов из БД для ближайших запланированных матчей
             $competitions = Event::query()
                 ->where('status', 'scheduled')
-                ->where('starts_at', '>', now())
+                ->where('starts_at', '>', Carbon::now('Europe/Moscow'))
                 ->select('competition')
                 ->distinct()
                 ->pluck('competition')
@@ -60,10 +60,10 @@ class BetController extends Controller
                 $collection = Event::with('bets')
                     ->where('competition', $comp)
                     ->where('status', 'scheduled')
-                    ->where('starts_at', '>', now())
+                    ->where('starts_at', '>', Carbon::now('Europe/Moscow'))
                     ->orderByDesc('starts_at')
                     ->orderByDesc('id')
-                    ->limit(12)
+                    ->limit(44)
                     ->get();
                 $collection = $prepareForView($collection);
 
@@ -255,7 +255,7 @@ class BetController extends Controller
                     ->filter(function($b){ return $b && $b->event && $b->event->starts_at; })
                     ->map(function($b){ return $b->event->starts_at; });
                 $latestStart = $evTimes->max();
-                $settlementAt = $latestStart ? $latestStart->copy()->addMinutes(120)->setTimezone(config('app.timezone')) : null;
+                $settlementAt = $latestStart ? $latestStart->copy()->addMinutes(120)->setTimezone('Europe/Moscow') : null;
                 $couponPayload = [
                     'id' => $full->id,
                     'bettor_name' => (string) $full->bettor_name,

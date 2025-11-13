@@ -111,9 +111,9 @@ class RebuildEvents extends Command
             try {
                 $resp = Http::withHeaders($headers)->timeout(10)->get($base.'/games/list', [
                     'LeagueId' => $leagueId,
-                    'Year' => (int) date('Y'),
+                    'Year' => 2024,
                     'Status' => 2,
-                    'Limit' => 16,
+                    'Limit' => 32,
                 ]);
                 $json = $resp->ok() ? ($resp->json() ?? []) : [];
                 $games = [];
