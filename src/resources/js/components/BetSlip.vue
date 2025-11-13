@@ -167,6 +167,7 @@ async function submitAll() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
         'X-CSRF-TOKEN': csrfToken,
         'X-Requested-With': 'XMLHttpRequest',
       },
@@ -197,6 +198,38 @@ async function submitAll() {
         el.textContent = formatRub(bal)
       }
     } catch (_) {}
+    try {
+      const c = json && json.coupon ? json.coupon : null
+      if (c) {
+        const block = document.querySelector('.coupons-block')
+        if (block) {
+          let body = block.querySelector('.rt-body')
+          if (!body) {
+            const empty = block.querySelector('.muted')
+            if (empty) empty.remove()
+            const tableHtml = `
+              <div class="responsive-table rt rt--coupons">
+                <div class="rt-head">
+                  <div class="rt-th">Купон ID</div>
+                  <div class="rt-th">Игрок</div>
+                  <div class="rt-th">События (экспресс)</div>
+                  <div class="rt-th">Сумма</div>
+                  <div class="rt-th">Итоговый кэф</div>
+                  <div class="rt-th">Потенц. выплата</div>
+                  <div class="rt-th">Статус</div>
+                  <div class="rt-th">Дата расчета</div>
+                  <div class="rt-th">Дата ставки</div>
+                </div>
+                <div class="rt-body"></div>
+              </div>`
+            block.insertAdjacentHTML('beforeend', tableHtml)
+            body = block.querySelector('.rt-body')
+          }
+          const rowHtml = renderCouponRow(c)
+          if (rowHtml && body) body.insertAdjacentHTML('afterbegin', rowHtml)
+        }
+      }
+    } catch (_) {}
   } catch (e) {
     errors.value.general = e.message
   } finally {
@@ -218,6 +251,61 @@ onMounted(() => {
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleOddClick)
 })
+function format2(n) {
+  const v = Number(n)
+  return Number.isFinite(v) ? v.toFixed(2) : '—'
+}
+
+function renderCouponRow(c) {
+  const potential = (typeof c.amount_demo === 'number' && typeof c.total_odds === 'number')
+    ? (c.amount_demo * c.total_odds) : null
+  let eventsHtml = ''
+  const selMap = { home: 'П1', draw: 'Ничья', away: 'П2' }
+  const bets = Array.isArray(c.bets) ? c.bets : []
+  bets.forEach(l => {
+    const ev = l.event || {}
+    const title = (ev.home_team && ev.away_team) ? `${ev.home_team} vs ${ev.away_team}` : (ev.title || `Event`)
+    const sk = String(l.selection || '').trim().toLowerCase()
+    const placed = (typeof l.placed_odds === 'number') ? l.placed_odds : null
+    const oddsHtml = placed !== null ? `<span class="muted">(кэф.: <span class="text-orange-400 text-base">${format2(placed)}</span>)</span>` : ''
+    eventsHtml += `<div class="mb-2 text-sm">
+      <div class="font-bold">${title}</div>
+      <div>Ставка - <span class="font-medium">${selMap[sk] || l.selection}</span> ${oddsHtml}</div>
+    </div>`
+  })
+  const statusText = (c.is_win === null || typeof c.is_win === 'undefined') ? 'Не рассчитано' : (c.is_win ? 'Выиграно' : 'Проигрыш')
+  const createdAt = c.created_at ? new Date(c.created_at).toLocaleString() : '—'
+  let settlementAt = '—'
+  if (c.settlement_at_display) {
+    settlementAt = c.settlement_at_display
+  } else if (c.settlement_at) {
+    const dt = new Date(c.settlement_at)
+    settlementAt = isNaN(dt) ? '—' : dt.toLocaleString()
+  } else {
+    const starts = bets
+      .map(l => {
+        const s = l && l.event && l.event.starts_at ? new Date(l.event.starts_at) : null
+        return s && !isNaN(s) ? s : null
+      })
+      .filter(Boolean)
+    if (starts.length) {
+      const latest = starts.reduce((a,b) => (a > b ? a : b))
+      const dt = new Date(latest.getTime() + 120 * 60000)
+      settlementAt = dt.toLocaleString()
+    }
+  }
+  return `<div class="rt-row">
+    <div class="rt-cell" data-label="Купон ID">${c.id}</div>
+    <div class="rt-cell" data-label="Игрок">${c.bettor_name}</div>
+    <div class="rt-cell" data-label="События (экспресс)">${eventsHtml}</div>
+    <div class="rt-cell" data-label="Сумма">${format2(c.amount_demo)}</div>
+    <div class="rt-cell" data-label="Итоговый кэф">${format2(c.total_odds)}</div>
+    <div class="rt-cell" data-label="Потенц. выплата">${potential !== null ? format2(potential) : '—'}</div>
+    <div class="rt-cell text-xs text-gray-500" data-label="Статус">${statusText}</div>
+    <div class="rt-cell" data-label="Дата расчета">${settlementAt}</div>
+    <div class="rt-cell text-xs" data-label="Дата ставки">${createdAt}</div>
+  </div>`
+}
 </script>
 
 <style scoped>

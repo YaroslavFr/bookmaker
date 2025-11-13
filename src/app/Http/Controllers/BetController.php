@@ -162,10 +162,11 @@ class BetController extends Controller
         }
 
         $coupon = null;
+        $newBalance = null;
         if (\Illuminate\Support\Facades\Auth::check()) {
             $user = \Illuminate\Support\Facades\Auth::user();
             try {
-                DB::transaction(function () use ($user, $bettorName, $data, $totalOdds, &$coupon) {
+                DB::transaction(function () use ($user, $bettorName, $data, $totalOdds, &$coupon, &$newBalance) {
                     $u = User::where('id', $user->id)->lockForUpdate()->first();
                     $amount = (float) ($data['amount_demo'] ?? 0);
                     if ($amount <= 0) {
@@ -176,14 +177,17 @@ class BetController extends Controller
                     }
                     $u->balance = (float) $u->balance - $amount;
                     $u->save();
+                    $newBalance = (float) $u->balance;
                     $coupon = Coupon::create([
                         'bettor_name' => $bettorName,
                         'amount_demo' => $data['amount_demo'],
                         'total_odds' => $totalOdds,
                     ]);
                 });
+                if ($newBalance !== null) { $user->balance = $newBalance; }
             } catch (\RuntimeException $e) {
-                if ($request->wantsJson()) {
+                $expectsJson = $request->expectsJson() || str_contains((string) $request->header('Accept'), 'application/json') || strtolower((string) $request->header('X-Requested-With')) === 'xmlhttprequest';
+                if ($expectsJson) {
                     return response()->json(['status' => 'error', 'message' => $e->getMessage()], 422);
                 }
                 return redirect()->back()->withErrors(['amount_demo' => $e->getMessage()]);
@@ -225,16 +229,51 @@ class BetController extends Controller
             ]);
         }
 
-        if ($request->wantsJson()) {
+        $expectsJson = $request->expectsJson() || str_contains((string) $request->header('Accept'), 'application/json') || strtolower((string) $request->header('X-Requested-With')) === 'xmlhttprequest';
+        if ($expectsJson) {
             $balance = null;
             if (\Illuminate\Support\Facades\Auth::check()) {
-                $balance = (float) (\Illuminate\Support\Facades\Auth::user()->balance ?? 0);
+                $balance = $newBalance !== null ? (float) $newBalance : (float) (\Illuminate\Support\Facades\Auth::user()->balance ?? 0);
+            }
+            $full = Coupon::with(['bets.event'])->find($coupon->id);
+            $couponPayload = null;
+            if ($full) {
+                $bets = [];
+                foreach (($full->bets ?? []) as $b) {
+                    $bets[] = [
+                        'event' => [
+                            'home_team' => $b->event->home_team ?? null,
+                            'away_team' => $b->event->away_team ?? null,
+                            'title' => $b->event->title ?? null,
+                            'starts_at' => $b->event->starts_at ? $b->event->starts_at->toIso8601String() : null,
+                        ],
+                        'selection' => (string) $b->selection,
+                        'placed_odds' => $b->placed_odds !== null ? (float) $b->placed_odds : null,
+                    ];
+                }
+                $evTimes = collect($full->bets ?? [])
+                    ->filter(function($b){ return $b && $b->event && $b->event->starts_at; })
+                    ->map(function($b){ return $b->event->starts_at; });
+                $latestStart = $evTimes->max();
+                $settlementAt = $latestStart ? $latestStart->copy()->addMinutes(120)->setTimezone(config('app.timezone')) : null;
+                $couponPayload = [
+                    'id' => $full->id,
+                    'bettor_name' => (string) $full->bettor_name,
+                    'amount_demo' => $full->amount_demo !== null ? (float) $full->amount_demo : null,
+                    'total_odds' => $full->total_odds !== null ? (float) $full->total_odds : null,
+                    'is_win' => $full->is_win,
+                    'created_at' => $full->created_at ? $full->created_at->toIso8601String() : null,
+                    'settlement_at' => $settlementAt ? $settlementAt->toIso8601String() : null,
+                    'settlement_at_display' => $settlementAt ? $settlementAt->format('Y-m-d H:i') : null,
+                    'bets' => $bets,
+                ];
             }
             return response()->json([
                 'status' => 'ok',
                 'coupon_id' => $coupon->id,
                 'total_odds' => $totalOdds,
                 'balance' => $balance,
+                'coupon' => $couponPayload,
             ]);
         }
 
