@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Bet;
 use App\Models\Event;
 use App\Models\Coupon;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
@@ -159,11 +161,40 @@ class BetController extends Controller
             }
         }
 
-        $coupon = Coupon::create([
-            'bettor_name' => $bettorName,
-            'amount_demo' => $data['amount_demo'],
-            'total_odds' => $totalOdds,
-        ]);
+        $coupon = null;
+        if (\Illuminate\Support\Facades\Auth::check()) {
+            $user = \Illuminate\Support\Facades\Auth::user();
+            try {
+                DB::transaction(function () use ($user, $bettorName, $data, $totalOdds, &$coupon) {
+                    $u = User::where('id', $user->id)->lockForUpdate()->first();
+                    $amount = (float) ($data['amount_demo'] ?? 0);
+                    if ($amount <= 0) {
+                        throw new \RuntimeException('Неверная сумма');
+                    }
+                    if ((float) ($u->balance ?? 0) < $amount) {
+                        throw new \RuntimeException('Недостаточно средств');
+                    }
+                    $u->balance = (float) $u->balance - $amount;
+                    $u->save();
+                    $coupon = Coupon::create([
+                        'bettor_name' => $bettorName,
+                        'amount_demo' => $data['amount_demo'],
+                        'total_odds' => $totalOdds,
+                    ]);
+                });
+            } catch (\RuntimeException $e) {
+                if ($request->wantsJson()) {
+                    return response()->json(['status' => 'error', 'message' => $e->getMessage()], 422);
+                }
+                return redirect()->back()->withErrors(['amount_demo' => $e->getMessage()]);
+            }
+        } else {
+            $coupon = Coupon::create([
+                'bettor_name' => $bettorName,
+                'amount_demo' => $data['amount_demo'],
+                'total_odds' => $totalOdds,
+            ]);
+        }
 
         // Create legs as Bet rows linked to the coupon
         foreach ($data['items'] as $item) {
@@ -195,10 +226,15 @@ class BetController extends Controller
         }
 
         if ($request->wantsJson()) {
+            $balance = null;
+            if (\Illuminate\Support\Facades\Auth::check()) {
+                $balance = (float) (\Illuminate\Support\Facades\Auth::user()->balance ?? 0);
+            }
             return response()->json([
                 'status' => 'ok',
                 'coupon_id' => $coupon->id,
                 'total_odds' => $totalOdds,
+                'balance' => $balance,
             ]);
         }
 

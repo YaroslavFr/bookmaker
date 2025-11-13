@@ -33,6 +33,7 @@ class AdminUserSeeder extends Seeder
                 'username' => $username,
                 'email' => $email,
                 'password' => $password,
+                'balance' => 10000,
             ]);
             $this->command->info("Администратор обновлён: {$email}");
         } else {
@@ -42,6 +43,7 @@ class AdminUserSeeder extends Seeder
                 'username' => $username,
                 'email' => $email,
                 'password' => $password,
+                'balance' => 10000,
             ]);
             $this->command->info("Администратор создан: {$email}");
         }

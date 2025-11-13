@@ -1,7 +1,10 @@
 <template>
   <div>
     <h2 class="font-bold md:mb-8 mb-3">Сделать демо-ставку</h2>
-    <form @submit.prevent="submitAll" class="bet-form">
+    <form @submit.prevent="submitAll" class="bet-form" style="position: relative;">
+      <div v-if="submitting" class="loader-overlay">
+        <div class="loader"></div>
+      </div>
       <!-- Общая ошибка с плейсхолдером -->
       <div class="general-error" :class="errors.general ? 'general-error--visible' : 'general-error--placeholder'">{{ errors.general || ' ' }}</div>
       
@@ -75,6 +78,11 @@ const selectionLabel = (sel, home, away) => {
   if (sel === 'draw') return 'draw'
   // Для доп. рынков показываем метку селекции как есть
   return sel
+}
+
+function formatRub(n) {
+  const v = Math.floor(Number(n) || 0)
+  return v.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
 }
 
 function addOrReplaceSlipItem(item) {
@@ -166,14 +174,29 @@ async function submitAll() {
     })
 
     if (!res.ok) {
-      const text = await res.text()
-      errors.value.general = 'Ошибка ставки: ' + text
+      let message = 'Ошибка ставки'
+      try {
+        const jsonErr = await res.json()
+        if (jsonErr && jsonErr.message) message = jsonErr.message
+      } catch (_) {
+        const text = await res.text()
+        message = text || message
+      }
+      errors.value.general = message
       return
     }
 
+    const json = await res.json()
     clearSlip()
     clearErrors()
-    location.reload()
+    try {
+      const bal = typeof json.balance === 'number' ? json.balance : null
+      const el = document.getElementById('user-balance')
+      if (el && bal !== null) {
+        el.dataset.balance = String(bal)
+        el.textContent = formatRub(bal)
+      }
+    } catch (_) {}
   } catch (e) {
     errors.value.general = e.message
   } finally {
@@ -199,6 +222,27 @@ onBeforeUnmount(() => {
 
 <style scoped>
 /* Дополнительные стили компонента при необходимости */
+.loader-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+.loader {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #93c5fd;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .form-hint {
   min-height: 30px;
   border-radius: 0.375rem;
