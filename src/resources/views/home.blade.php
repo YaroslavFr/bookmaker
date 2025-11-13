@@ -57,11 +57,17 @@
                         <div class="rt-th">Итоговый кэф</div>
                         <div class="rt-th">Потенц. выплата</div>
                         <div class="rt-th">Статус</div>
+                        <div class="rt-th">Дата расчета</div>
                         <div class="rt-th">Дата ставки</div>
                     </div>
                     <div class="rt-body">
                         @foreach($coupons as $coupon)
                             @php($potential = ($coupon->total_odds && $coupon->amount_demo) ? ($coupon->amount_demo * $coupon->total_odds) : null)
+                            @php($evTimes = collect($coupon->bets ?? [])
+                                ->filter(function($b){ return $b && $b->event && $b->event->starts_at; })
+                                ->map(function($b){ return $b->event->starts_at; }))
+                            @php($latestStart = $evTimes->max())
+                            @php($settlementAt = $latestStart ? $latestStart->copy()->addMinutes(120)->setTimezone(config('app.timezone')) : null)
                             <div class="rt-row">
                                 <div class="rt-cell" data-label="Купон ID">{{ $coupon->id }}</div>
                                 <div class="rt-cell" data-label="Игрок">{{ $coupon->bettor_name }}</div>
@@ -94,8 +100,9 @@
                                 <div class="rt-cell" data-label="Сумма">{{ $coupon->amount_demo ? number_format($coupon->amount_demo, 2) : '—' }}</div>
                                 <div class="rt-cell" data-label="Итоговый кэф">{{ $coupon->total_odds ? number_format($coupon->total_odds, 2) : '—' }}</div>
                                 <div class="rt-cell" data-label="Потенц. выплата">{{ $potential ? number_format($potential, 2) : '—' }}</div>
-                                <div class="rt-cell" data-label="Статус">{{ $coupon->is_win === null ? '—' : ($coupon->is_win ? 'Выиграно' : 'Проигрыш') }}</div>
-                                <div class="rt-cell" data-label="Дата ставки">{{ $coupon->created_at ? $coupon->created_at->format('Y-m-d H:i') : '—' }}</div>
+                                <div class="rt-cell text-xs text-gray-500" data-label="Статус">{{ $coupon->is_win === null ? 'Не рассчитано' : ($coupon->is_win ? 'Выиграно' : 'Проигрыш') }}</div>
+                                <div class="rt-cell" data-label="Дата расчета">{{ $settlementAt ? $settlementAt->format('Y-m-d H:i') : '—' }}</div>
+                                <div class="rt-cell text-xs" data-label="Дата ставки">{{ $coupon->created_at ? $coupon->created_at->format('Y-m-d H:i') : '—' }}</div>
                             </div>
                         @endforeach
                     </div>

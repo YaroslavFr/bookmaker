@@ -170,7 +170,7 @@ td {
 .rt-row {
   padding: 8px 15px;
   display: grid;
-  grid-template-columns: 1.1fr 1fr 3fr 0.8fr 0.9fr 1fr 0.9fr 1.1fr;
+  grid-template-columns: 1.1fr 1fr 3fr 0.8fr 0.9fr 1fr 0.9fr 1.1fr 1.1fr;
   border-bottom: 1px solid #eee;
 }
 .rt-row:nth-child(even) {
@@ -188,9 +188,11 @@ td {
 
 .rt-th,
 .rt-cell {
-  
   padding: 2px;
   text-align: left;
+}
+.rt-cell{
+  font-size: 13px;
 }
 
 .rt-row:hover {
