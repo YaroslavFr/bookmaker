@@ -34,6 +34,8 @@
                     @endif
                 @endforeach
                 </div>
+            
+            @if(auth()->check())
             <div class="card mt-20 ">
                 <div id="vue-app"
                      data-csrf="{{ csrf_token() }}"
@@ -41,6 +43,7 @@
                      data-is-auth="{{ auth()->check() ? '1' : '0' }}"
                      data-username="{{ auth()->check() ? (auth()->user()->username ?? '') : '' }}"></div>
             </div>
+            @endif
             </div>
             @php($coupons = $coupons ?? [])
             <div class="card mt-20 coupons-block">

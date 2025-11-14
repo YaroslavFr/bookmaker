@@ -8,15 +8,7 @@
       <!-- Общая ошибка с плейсхолдером -->
       <div class="general-error" :class="errors.general ? 'general-error--visible' : 'general-error--placeholder'">{{ errors.general || ' ' }}</div>
       
-      <div class="row row-start" v-if="!isAuth">
-        <label for="bettor_name" class="form-label">Имя игрока</label>
-        <div>
-          <input type="text" id="bettor_name" placeholder="Например: Иван" v-model="bettorName"
-                :class="['border rounded-md px-3 py-2 focus:outline-none', errors.name ? 'border-red-500 focus:ring-2 focus:ring-red-500' : 'border-gray-300 focus:ring-2 focus:ring-blue-500']" />
-          <p class="form-hint" :class="{ 'form-hint--error': !!errors.name, 'form-hint--empty': !errors.name }">{{ errors.name || ' ' }}</p>
-        </div>
-      </div>
-      <div class="row row-start" v-else>
+      <div class="row row-start">
         <div class="form-label">Логин</div>
         <div>
           <div class="font-bold px-3 py-0">{{ bettorName }}</div>
@@ -110,12 +102,6 @@ function clearErrors() {
 function validateForm() {
   clearErrors()
   let ok = true
-  if (!isAuth.value) {
-    if (!bettorName.value || bettorName.value.trim().length === 0) {
-      errors.value.name = 'Вы не заполнили имя игрока'
-      ok = false
-    }
-  }
   if (!amountDemo.value || Number(amountDemo.value) <= 0) {
     errors.value.amount = 'Введите сумму ставки'
     ok = false
