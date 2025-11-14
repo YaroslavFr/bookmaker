@@ -46,53 +46,170 @@
       "roundName": "Regular Season - 1",
       "odds": [
         {
-          "marketId": 1,
-          "marketName": null,
+          "marketId": 200,
+          "marketName": "2 тайм",
           "odds": [
-            { "name": "Home", "value": 3.18, "openingValue": null },
-            { "name": "Away", "value": 2.16, "openingValue": null },
-            { "name": "Draw", "value": 3.33, "openingValue": null }
+            { "name": "Home", "value": 2.38, "openingValue": null },
+            { "name": "Draw", "value": 2.24, "openingValue": null },
+            { "name": "Away", "value": 4.60, "openingValue": null }
           ]
         },
         {
-          "marketId": 2,
-          "marketName": null,
+          "marketId": 300,
+          "marketName": "Азиатский Гандикап",
           "odds": [
-            { "name": "Home", "value": 2.34, "openingValue": null },
-            { "name": "Away", "value": 1.58, "openingValue": null }
+            { "name": "Home -1.25", "value": 3.48, "openingValue": null },
+            { "name": "Away -1.25", "value": 1.28, "openingValue": null },
+            { "name": "Home -1", "value": 3.08, "openingValue": null },
+            { "name": "Away -1", "value": 1.39, "openingValue": null },
+            { "name": "Home -0.75", "value": 2.29, "openingValue": null },
+            { "name": "Away -0.75", "value": 1.59, "openingValue": null },
+            { "name": "Home -0.25", "value": 1.66, "openingValue": null },
+            { "name": "Away -0.25", "value": 2.13, "openingValue": null },
+            { "name": "Home +0", "value": 1.36, "openingValue": null },
+            { "name": "Away +0", "value": 2.92, "openingValue": null },
+            { "name": "Home +0.25", "value": 1.26, "openingValue": null },
+            { "name": "Away +0.25", "value": 3.45, "openingValue": null },
+            { "name": "Home +0.75", "value": 1.10, "openingValue": null },
+            { "name": "Away +0.75", "value": 5.60, "openingValue": null },
+            { "name": "Home -2", "value": 8.10, "openingValue": null },
+            { "name": "Away -2", "value": 1.04, "openingValue": null },
+            { "name": "Home +1", "value": 1.01, "openingValue": null },
+            { "name": "Away +1", "value": 9.80, "openingValue": null },
+            { "name": "Home -1.75", "value": 5.15, "openingValue": null },
+            { "name": "Away -1.75", "value": 1.13, "openingValue": null },
+            { "name": "Home -1.5", "value": 3.94, "openingValue": null },
+            { "name": "Away -1.5", "value": 1.22, "openingValue": null },
+            { "name": "Home +1.25", "value": 1.00, "openingValue": null },
+            { "name": "Away +1.25", "value": 10.50, "openingValue": null },
+            { "name": "Home -2.5", "value": 8.90, "openingValue": null },
+            { "name": "Away -2.5", "value": 1.02, "openingValue": null },
+            { "name": "Home -2.25", "value": 8.50, "openingValue": null },
+            { "name": "Away -2.25", "value": 1.03, "openingValue": null }
           ]
         },
         {
-          "marketId": 12,
-          "marketName": null,
+          "marketId": 400,
+          "marketName": "Тоталы",
           "odds": [
-            { "name": "Home/Draw", "value": 1.68, "openingValue": null },
-            { "name": "Home/Away", "value": 1.32, "openingValue": null },
-            { "name": "Draw/Away", "value": 1.35, "openingValue": null }
+            { "name": "Over 1.5", "value": 1.46, "openingValue": null },
+            { "name": "Under 1.5", "value": 2.55, "openingValue": null },
+            { "name": "Over 1.75", "value": 1.61, "openingValue": null },
+            { "name": "Under 1.75", "value": 2.22, "openingValue": null },
+            { "name": "Over 2.0", "value": 1.85, "openingValue": null },
+            { "name": "Under 2.0", "value": 1.91, "openingValue": null },
+            { "name": "Over 2.25", "value": 2.19, "openingValue": null },
+            { "name": "Under 2.25", "value": 1.66, "openingValue": null },
+            { "name": "Over 2.5", "value": 2.55, "openingValue": null },
+            { "name": "Under 2.5", "value": 1.53, "openingValue": null },
+            { "name": "Over 2.75", "value": 3.04, "openingValue": null },
+            { "name": "Under 2.75", "value": 1.37, "openingValue": null },
+            { "name": "Over 3.5", "value": 4.85, "openingValue": null },
+            { "name": "Under 3.5", "value": 1.15, "openingValue": null },
+            { "name": "Over 0.5", "value": 1.05, "openingValue": null },
+            { "name": "Under 0.5", "value": 6.65, "openingValue": null },
+            { "name": "Over 0.75", "value": 1.08, "openingValue": null },
+            { "name": "Under 0.75", "value": 6.00, "openingValue": null },
+            { "name": "Over 1.0", "value": 1.11, "openingValue": null },
+            { "name": "Under 1.0", "value": 5.35, "openingValue": null },
+            { "name": "Over 1.25", "value": 1.28, "openingValue": null },
+            { "name": "Under 1.25", "value": 3.28, "openingValue": null },
+            { "name": "Over 3.0", "value": 4.05, "openingValue": null },
+            { "name": "Under 3.0", "value": 1.22, "openingValue": null },
+            { "name": "Over 4.5", "value": 10.50, "openingValue": null },
+            { "name": "Under 4.5", "value": 1.01, "openingValue": null },
+            { "name": "Over 3.25", "value": 4.45, "openingValue": null },
+            { "name": "Under 3.25", "value": 1.18, "openingValue": null },
+            { "name": "Over 3.75", "value": 6.30, "openingValue": null },
+            { "name": "Under 3.75", "value": 1.08, "openingValue": null },
+            { "name": "Over 4.0", "value": 9.50, "openingValue": null },
+            { "name": "Under 4.0", "value": 1.02, "openingValue": null }
           ]
         },
         {
-          "marketId": 5,
-          "marketName": null,
+          "marketId": 410,
+          "marketName": "Тоталы 1 тайм",
           "odds": [
-            { "name": "Over 2.5", "value": 1.86, "openingValue": null },
-            { "name": "Under 2.5", "value": 1.93, "openingValue": null }
+            { "name": "Over 1.5", "value": 3.54, "openingValue": null },
+            { "name": "Under 1.5", "value": 1.25, "openingValue": null },
+            { "name": "Over 2.0", "value": 8.60, "openingValue": null },
+            { "name": "Under 2.0", "value": 1.02, "openingValue": null },
+            { "name": "Over 2.5", "value": 10.25, "openingValue": null },
+            { "name": "Under 2.5", "value": 1.00, "openingValue": null },
+            { "name": "Over 0.5", "value": 1.57, "openingValue": null },
+            { "name": "Under 0.5", "value": 2.36, "openingValue": null },
+            { "name": "Over 1.0", "value": 2.38, "openingValue": null },
+            { "name": "Under 1.0", "value": 1.54, "openingValue": null }
           ]
         },
         {
-          "marketId": 16,
-          "marketName": null,
+          "marketId": 420,
+          "marketName": "Тоталы 2 тайм",
           "odds": [
-            { "name": "Over 1.5", "value": 2.74, "openingValue": null },
-            { "name": "Under 1.5", "value": 1.44, "openingValue": null }
+            { "name": "Over 1.5", "value": 2.65, "openingValue": null },
+            { "name": "Under 1.5", "value": 1.44, "openingValue": null },
+            { "name": "Over 2.0", "value": 5.30, "openingValue": null },
+            { "name": "Under 2.0", "value": 1.12, "openingValue": null },
+            { "name": "Over 2.5", "value": 6.50, "openingValue": null },
+            { "name": "Under 2.5", "value": 1.06, "openingValue": null },
+            { "name": "Over 0.5", "value": 1.34, "openingValue": null },
+            { "name": "Under 0.5", "value": 3.08, "openingValue": null },
+            { "name": "Over 1.0", "value": 1.76, "openingValue": null },
+            { "name": "Under 1.0", "value": 2.03, "openingValue": null }
           ]
         },
         {
-          "marketId": 17,
-          "marketName": null,
+          "marketId": 500,
+          "marketName": "1 Тайм / 2 Тайм",
           "odds": [
-            { "name": "Over 1.5", "value": 2.09, "openingValue": null },
-            { "name": "Under 1.5", "value": 1.71, "openingValue": null }
+            { "name": "Home/Draw", "value": 17.00, "openingValue": null },
+            { "name": "Home/Away", "value": 58.00, "openingValue": null },
+            { "name": "Draw/Away", "value": 8.80, "openingValue": null },
+            { "name": "Draw/Draw", "value": 4.00, "openingValue": null },
+            { "name": "Home/Home", "value": 3.05, "openingValue": null },
+            { "name": "Draw/Home", "value": 4.60, "openingValue": null },
+            { "name": "Away/Home", "value": 36.00, "openingValue": null },
+            { "name": "Away/Draw", "value": 17.25, "openingValue": null },
+            { "name": "Away/Away", "value": 7.50, "openingValue": null }
+          ]
+        },
+        {
+          "marketId": 600,
+          "marketName": "Обе забьют",
+          "odds": [
+            { "name": "Yes", "value": 2.14, "openingValue": null },
+            { "name": "No", "value": 1.63, "openingValue": null }
+          ]
+        },
+        {
+          "marketId": 610,
+          "marketName": "1 забьет / не забьет",
+          "odds": [
+            { "name": "Yes", "value": 2.89, "openingValue": null },
+            { "name": "No", "value": 1.36, "openingValue": null }
+          ]
+        },
+        {
+          "marketId": 620,
+          "marketName": "2 забьет / не забьет",
+          "odds": [
+            { "name": "Yes", "value": 6.30, "openingValue": null },
+            { "name": "No", "value": 1.08, "openingValue": null }
+          ]
+        },
+        {
+          "marketId": 700,
+          "marketName": "Фора",
+          "odds": [
+            { "name": "Home -1", "value": 3.94, "openingValue": null },
+            { "name": "Away -1", "value": 1.84, "openingValue": null },
+            { "name": "Draw -1", "value": 3.48, "openingValue": null },
+            { "name": "Home -2", "value": 8.90, "openingValue": null },
+            { "name": "Draw -2", "value": 6.05, "openingValue": null },
+            { "name": "Away -2", "value": 1.22, "openingValue": null },
+            { "name": "Home +1", "value": 1.24, "openingValue": null },
+            { "name": "Draw +1", "value": 3.58, "openingValue": null },
+            { "name": "Away +1", "value": 5.60, "openingValue": null }
           ]
         }
       ]
