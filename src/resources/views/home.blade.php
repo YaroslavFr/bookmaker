@@ -46,7 +46,6 @@
             </div>
             @endif
             </div>
-            <a href="/events/settle-test/1000000000666777" class="btn btn-primary">Тестовый расчёт</a>
             @php($coupons = $coupons ?? [])
             <div class="card mt-20 coupons-block">
                 <h2 class="px-4 pl-8">Последние ставки (купоны)</h2>
