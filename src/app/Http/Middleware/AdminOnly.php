@@ -34,6 +34,13 @@ class AdminOnly
             }
         }
 
+        if (!$isAdmin && method_exists($user, 'getAttribute')) {
+            $role = $user->getAttribute('role');
+            if ($role && in_array(strtolower($role), ['admin','moderator'], true)) {
+                $isAdmin = true;
+            }
+        }
+
         if (!$isAdmin) {
             abort(403, 'Доступ только для администратора');
         }
