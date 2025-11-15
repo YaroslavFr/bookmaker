@@ -270,6 +270,33 @@ public function index()
                     </ul>
                 </div>
             </section>
+            <section class="doc-section" id="migrations">
+                <div class="doc-card">
+                    <h2>Миграции: команды</h2>
+                    <ul class="doc-list">
+                        <li>Локально: <code class="doc-kbd">php artisan migrate</code></li>
+                        <li>Прод: <code class="doc-kbd">php artisan migrate --force</code></li>
+                        <li>Конкретный файл: <code class="doc-kbd">php artisan migrate --path=database/migrations/2025_11_15_120000_add_role_to_users_table.php</code></li>
+                        <li>Полная пересоздание: <code class="doc-kbd">php artisan migrate:fresh --seed</code></li>
+                        <li>Сидеры: <code class="doc-kbd">php artisan db:seed --class=ModeratorUserSeeder</code></li>
+                    </ul>
+                    <div class="doc-code"><pre><code># Локально
+php artisan migrate
+
+# В продакшне
+php artisan migrate --force
+
+# Конкретная миграция по пути
+php artisan migrate --path=database/migrations/2025_11_15_120000_add_role_to_users_table.php --force
+
+# Полная пересоздание схемы + сиды (ОПАСНО)
+php artisan migrate:fresh --seed --force
+
+# Сиды
+php artisan db:seed --class=ModeratorUserSeeder --force
+</code></pre></div>
+                </div>
+            </section>
 
             <section class="doc-section" id="model">
                 <div class="doc-card">
@@ -490,7 +517,7 @@ SSTATS_BASE=https://&lt;base&gt;
                         <li><strong>release</strong> — сборная задача для релиза: кеши, миграции, очистка и подготовка окружения.</li>
                     </ul>
 
-                    <div class="doc-code"><pre><code># Примеры запуска задач Envoy
+                <div class="doc-code"><pre><code># Примеры запуска задач Envoy
 # Укажите сервер, если их несколько (например, beget или local)
 envoy run setup --server=beget
 envoy run deploy --server=beget --branch=main
@@ -502,6 +529,30 @@ envoy run sync-odds --server=beget
 envoy run sync-results --server=beget
 envoy run admin-update --server=beget --admin_email=admin@example.com
 envoy run release --server=beget
+</code></pre></div>
+                    <h2>Перенос данных БД (локальная → удалённая)</h2>
+                    <ul class="doc-list">
+                        <li>Рекомендуется использовать дамп/импорт СУБД.</li>
+                        <li>Seeder'ы не переносят текущие данные, они генерируют предопределённые.</li>
+                    </ul>
+                    <div class="doc-code"><pre><code># MySQL/MariaDB: экспорт локальной БД
+mysqldump -u &lt;user&gt; -p &lt;database&gt; &gt; dump.sql
+
+# Копируем dump.sql на сервер
+scp dump.sql user@server:/path/to/
+
+# Импорт на удалённой БД
+mysql -u &lt;remote_user&gt; -p &lt;remote_database&gt; &lt; /path/to/dump.sql
+
+# PostgreSQL
+pg_dump -U &lt;user&gt; -d &lt;database&gt; -f dump.sql
+psql -U &lt;remote_user&gt; -d &lt;remote_database&gt; -f dump.sql
+
+# SQLite: копирование файла БД
+cp database/database.sqlite /remote/path/database.sqlite
+
+# Через Laravel (две коннекции):
+# добавьте "remote" в config/database.php и перенесите данные командой с chunkById+upsert
 </code></pre></div>
 
                     <h2>Запуск релиза</h2>

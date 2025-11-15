@@ -48,7 +48,7 @@ class BetController extends Controller
             // Получаем список доступных чемпионатов из БД для ближайших запланированных матчей
             $competitions = Event::query()
                 ->where('status', 'scheduled')
-                ->where('starts_at', '>', Carbon::now('Europe/Moscow'))
+                ->where('starts_at', '>', Carbon::now())
                 ->select('competition')
                 ->distinct()
                 ->pluck('competition')
@@ -60,9 +60,9 @@ class BetController extends Controller
                 $collection = Event::with('bets')
                     ->where('competition', $comp)
                     ->where('status', 'scheduled')
-                    ->where('starts_at', '<', Carbon::now('Europe/Moscow'))
-                    ->orderByDesc('starts_at')
-                    ->orderByDesc('id')
+                    ->where('starts_at', '>', Carbon::now())
+                    ->orderBy('starts_at')
+                    ->orderBy('id')
                     ->limit(44)
                     ->get();
                 $collection = $prepareForView($collection);
@@ -574,7 +574,7 @@ class BetController extends Controller
                     $bet->is_win = ($payout === $amount && !$win) ? null : $win;
                     if ($win) { $payout = $payout > 0 ? $payout : ($amount * ($odds ?: 1)); }
                     $bet->payout_demo = $payout;
-                    $bet->settled_at = now('Europe/Moscow');
+                    $bet->settled_at = now();
                     $bet->save();
                 }
             });
@@ -587,7 +587,7 @@ class BetController extends Controller
                     $allWin = $coupon->bets->every(fn($b) => $b->is_win === true);
                     $coupon->is_win = $allWin;
                     $coupon->payout_demo = $allWin ? ($coupon->amount_demo * ($coupon->total_odds ?? 1)) : 0;
-                    $coupon->settled_at = now('Europe/Moscow');
+                    $coupon->settled_at = now();
                     $coupon->save();
                 }
             }
@@ -743,7 +743,7 @@ class BetController extends Controller
                     $bet->is_win = ($payout === $amount && !$win) ? null : $win;
                     if ($win) { $payout = $payout > 0 ? $payout : ($amount * ($odds ?: 1)); }
                     $bet->payout_demo = $payout;
-                    $bet->settled_at = now('Europe/Moscow');
+                    $bet->settled_at = now();
                     $bet->save();
                 }
             });
@@ -757,7 +757,7 @@ class BetController extends Controller
                     $allWin = $coupon->bets->every(fn($b) => $b->is_win === true);
                     $coupon->is_win = $allWin;
                     $coupon->payout_demo = $allWin ? ($coupon->amount_demo * ($coupon->total_odds ?? 1)) : 0;
-                    $coupon->settled_at = now('Europe/Moscow');
+                    $coupon->settled_at = now();
                     $coupon->save();
                 }
             }
@@ -782,7 +782,7 @@ class BetController extends Controller
         $base = rtrim(config('services.sstats.base_url', 'https://api.sstats.net'), '/');
         $key = config('services.sstats.key');
         $headers = $key ? ['X-API-KEY' => $key] : [];
-        $now = Carbon::now('Europe/Moscow')->subMinutes(100);
+        $now = Carbon::now()->subMinutes(100);
         $events = Event::query()
             ->where('status', 'scheduled')
             ->whereNotNull('starts_at')
@@ -816,7 +816,7 @@ class BetController extends Controller
             $ev->result = $homeScore === $awayScore ? 'draw' : ($homeScore > $awayScore ? 'home' : 'away');
             $ev->result_text = 'HT(' . ($homeSt1 ?? 0) . ':' . ($awaySt1 ?? 0) . ') 2T(' . ($homeSt2 ?? 0) . ':' . ($awaySt2 ?? 0) . ') FT ' . ($homeScore ?? 0) . ':' . ($awayScore ?? 0);
             $ev->status = 'finished';
-            $ev->ends_at = Carbon::now('Europe/Moscow');
+            $ev->ends_at = Carbon::now();
             $ev->save();
         }
         // return redirect()->route('home')->with('status', 'Обработка завершена');
@@ -883,7 +883,7 @@ class BetController extends Controller
                     $ev->home_st2_result = $homeSt2; $ev->away_st2_result = $awaySt2;
                     $ev->result = $homeScore === $awayScore ? 'draw' : ($homeScore > $awayScore ? 'home' : 'away');
                     $ev->result_text = 'HT(' . ($homeSt1 ?? 0) . ':' . ($awaySt1 ?? 0) . ') 2T(' . ($homeSt2 ?? 0) . ':' . ($awaySt2 ?? 0) . ') FT ' . ($homeScore ?? 0) . ':' . ($awayScore ?? 0);
-                    if ($ev->status !== 'finished') { $ev->status = 'finished'; $ev->ends_at = Carbon::now('Europe/Moscow'); }
+                    if ($ev->status !== 'finished') { $ev->status = 'finished'; $ev->ends_at = Carbon::now(); }
                     $ev->save();
                 }
             }
@@ -1008,7 +1008,7 @@ class BetController extends Controller
                     $bet->is_win = ($payout === $amount && !$win) ? null : $win;
                     if ($win) { $payout = $payout > 0 ? $payout : ($amount * ($odds ?: 1)); }
                     $bet->payout_demo = $payout;
-                    $bet->settled_at = now('Europe/Moscow');
+                    $bet->settled_at = now();
                     $bet->save();
                 }
             }
@@ -1021,7 +1021,7 @@ class BetController extends Controller
                     $allWin = $coupon->bets->every(fn($b) => $b->is_win === true);
                     $coupon->is_win = $allWin;
                     $coupon->payout_demo = $allWin ? ($coupon->amount_demo * ($coupon->total_odds ?? 1)) : 0;
-                    $coupon->settled_at = now('Europe/Moscow');
+                    $coupon->settled_at = now();
                     $coupon->save();
                 }
             }
