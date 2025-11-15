@@ -26,6 +26,9 @@ if (env('DOCS_AUTH_MODE', 'prod') === 'prod') {
 Route::post('/bets', [BetController::class, 'store'])->name('bets.store');
 Route::post('/events/{event}/settle', [BetController::class, 'settle'])->name('events.settle');
 Route::get('/events/sync-results', [BetController::class, 'syncResults'])->name('events.sync');
+Route::get('/events/{event}/settle-test', [BetController::class, 'settleByTest'])->name('events.settle_test');
+Route::get('/events/settle-test/{externalId}', [BetController::class, 'settleByTestExternal'])->name('events.settle_test_external');
+Route::get('/events/process-due', [BetController::class, 'processDueScheduled100'])->name('events.process_due');
 // Page removed per request
 
 // Statistics page (public access)

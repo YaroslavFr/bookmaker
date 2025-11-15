@@ -546,6 +546,46 @@ docker compose exec app php artisan serve --host=0.0.0.0 --port=8000 --no-reload
 # Альтернатива без Compose (по имени контейнера)
 docker exec games_app php artisan serve --host=0.0.0.0 --port=8000 --no-reload
 </code></pre></div>
+<div>
+    <pre>
+    Где и как считается результат
+
+- BetController@autoSettleDue — автоматический расчёт по времени и данным API.
+  
+  - Отбор прошедших событий: src/app/Http/Controllers/BetController.php:435–440
+  - Получение результатов матча и таймов из API: src/app/Http/Controllers/BetController.php:442–450
+  - Восстановление счета 2‑го тайма при его отсутствии: src/app/Http/Controllers/BetController.php:451–454
+  - Установка результата события ( home/draw/away ): src/app/Http/Controllers/BetController.php:458–461
+  - Расчёт ставок по рынкам:
+    - 1x2 (итог матча): src/app/Http/Controllers/BetController.php:468–471
+    - «2 тайм»: src/app/Http/Controllers/BetController.php:471–475
+    - «Тоталы 1 тайм»: src/app/Http/Controllers/BetController.php:476–484
+    - «Тоталы 2 тайм»: src/app/Http/Controllers/BetController.php:485–493
+    - «Тоталы» (общий тотал, включая четвертные линии): src/app/Http/Controllers/BetController.php:494–509
+    - «Обе забьют»: src/app/Http/Controllers/BetController.php:510–513
+    - «1 забьет / не забьет»: src/app/Http/Controllers/BetController.php:514–517
+    - «2 забьет / не забьет»: src/app/Http/Controllers/BetController.php:518–521
+    - «Азиатский Гандикап»/«Фора» (включая четвертные линии): src/app/Http/Controllers/BetController.php:522–541
+    - «1 Тайм / 2 Тайм»: src/app/Http/Controllers/BetController.php:542–548
+  - Обновление ставки: is_win , payout_demo , settled_at : src/app/Http/Controllers/BetController.php:550–556
+  - Итоги купона, выставление is_win , payout_demo , settled_at : src/app/Http/Controllers/BetController.php:558–569
+- BetController@settle — ручная установка результата матча.
+  
+  - Установка статуса и результата события: src/app/Http/Controllers/BetController.php:292–296
+  - Расчёт связанных ставок 1x2 по кэфам события: src/app/Http/Controllers/BetController.php:298–311
+  - Итоги купона (если все ноги рассчитаны): src/app/Http/Controllers/BetController.php:315–327
+- BetController@syncResults — пакетная синхронизация завершённых матчей из API.
+  
+  - Установка результата и завершение события: src/app/Http/Controllers/BetController.php:395–405
+  - Расчёт связанных ставок 1x2 по кэфам события: src/app/Http/Controllers/BetController.php:407–419
+Тестовые данные для рынков
+
+- В режиме теста рынки подтягиваются из тестового файла:
+  - Условие для тестового источника (события TEST или external_id с префиксом): src/app/Http/Controllers/OddsController.php:17
+  - Тестовый файл с рынками: src/odds_test.json (изменён под ваши показатели)
+Если нужно, могу добавить маршрут для autoSettleDue и запуск по расписанию, чтобы расчёт происходил автоматически.
+</pre>
+</div>
                 </div>
             </section>
         </div>

@@ -43,8 +43,12 @@
                      data-is-auth="{{ auth()->check() ? '1' : '0' }}"
                      data-username="{{ auth()->check() ? (auth()->user()->username ?? '') : '' }}"></div>
             </div>
+            <div class="mt-4 px-8">
+                <a href="{{ route('events.process_due') }}" class="btn btn-primary">Запустить обработку матчей</a>
+            </div>
             @endif
             </div>
+            <a href="/events/settle-test/1000000000666777" class="btn btn-primary">Тестовый расчёт</a>
             @php($coupons = $coupons ?? [])
             <div class="card mt-20 coupons-block">
                 <h2 class="px-4 pl-8">Последние ставки (купоны)</h2>
@@ -103,7 +107,7 @@
                                 <div class="rt-cell" data-label="Сумма">{{ $coupon->amount_demo ? number_format($coupon->amount_demo, 2) : '—' }}</div>
                                 <div class="rt-cell" data-label="Итоговый кэф">{{ $coupon->total_odds ? number_format($coupon->total_odds, 2) : '—' }}</div>
                                 <div class="rt-cell" data-label="Потенц. выплата">{{ $potential ? number_format($potential, 2) : '—' }}</div>
-                                <div class="rt-cell text-xs text-gray-500" data-label="Статус">{{ $coupon->is_win === null ? 'Не рассчитано' : ($coupon->is_win ? 'Выиграно' : 'Проигрыш') }}</div>
+                                <div class="rt-cell text-xs {{ $coupon->is_win === null ? 'text-gray-500' : ($coupon->is_win ? 'text-green-500' : 'text-red-500') }} " data-label="Статус">{{ $coupon->is_win === null ? 'Не рассчитано' : ($coupon->is_win ? 'Выиграно' : 'Проигрыш') }}</div>
                                 <div class="rt-cell" data-label="Дата расчета">{{ $settlementAt ? $settlementAt->format('Y-m-d H:i') : '—' }}</div>
                                 <div class="rt-cell text-xs" data-label="Дата ставки">{{ $coupon->created_at ? $coupon->created_at->format('Y-m-d H:i') : '—' }}</div>
                             </div>

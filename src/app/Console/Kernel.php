@@ -22,6 +22,15 @@ class Kernel extends ConsoleKernel
 
         // Daily refresh for stats cache
         $schedule->command('stats:refresh')->dailyAt('03:30');
+
+        if (env('SETTLE_ENABLED', true)) {
+            $schedule->call(function() {
+                app(\App\Http\Controllers\BetController::class)->autoSettleDue();
+            })->everyTwoMinutes()->name('bets:auto-settle')->withoutOverlapping();
+            $schedule->call(function() {
+                app(\App\Http\Controllers\BetController::class)->processDueScheduled100();
+            })->everyMinute()->name('events:process-due')->withoutOverlapping();
+        }
     }
 
     /**
