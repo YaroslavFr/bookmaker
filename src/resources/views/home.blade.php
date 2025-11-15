@@ -41,10 +41,8 @@
                      data-csrf="{{ csrf_token() }}"
                      data-post-url="{{ route('bets.store') }}"
                      data-is-auth="{{ auth()->check() ? '1' : '0' }}"
-                     data-username="{{ auth()->check() ? (auth()->user()->username ?? '') : '' }}"></div>
-            </div>
-            <div class="mt-4 px-8">
-                <a href="{{ route('events.process_due') }}" class="btn btn-primary">Запустить обработку матчей</a>
+                     data-username="{{ auth()->check() ? (auth()->user()->username ?? '') : '' }}">
+                </div>
             </div>
             @endif
             </div>
@@ -107,7 +105,7 @@
                                 <div class="rt-cell" data-label="Сумма">{{ $coupon->amount_demo ? number_format($coupon->amount_demo, 2) : '—' }}</div>
                                 <div class="rt-cell" data-label="Итоговый кэф">{{ $coupon->total_odds ? number_format($coupon->total_odds, 2) : '—' }}</div>
                                 <div class="rt-cell" data-label="Потенц. выплата">{{ $potential ? number_format($potential, 2) : '—' }}</div>
-                                <div class="rt-cell text-xs {{ $coupon->is_win === null ? 'text-gray-500' : ($coupon->is_win ? 'text-green-500' : 'text-red-500') }} " data-label="Статус">{{ $coupon->is_win === null ? 'Не рассчитано' : ($coupon->is_win ? 'Выиграно' : 'Проигрыш') }}</div>
+                                <div class="rt-cell text-xs {{ $coupon->is_win === null ? 'text-gray-500' : ($coupon->is_win ? 'text-green-500' : 'text-red-600') }}" data-label="Статус">{{ $coupon->is_win === null ? 'Не рассчитано' : ($coupon->is_win ? 'Выиграно' : 'Проигрыш') }}</div>
                                 <div class="rt-cell" data-label="Дата расчета">{{ $settlementAt ? $settlementAt->format('Y-m-d H:i') : '—' }}</div>
                                 <div class="rt-cell text-xs" data-label="Дата ставки">{{ $coupon->created_at ? $coupon->created_at->format('Y-m-d H:i') : '—' }}</div>
                             </div>

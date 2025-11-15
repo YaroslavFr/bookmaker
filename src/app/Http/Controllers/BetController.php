@@ -60,7 +60,7 @@ class BetController extends Controller
                 $collection = Event::with('bets')
                     ->where('competition', $comp)
                     ->where('status', 'scheduled')
-                    ->where('starts_at', '>', Carbon::now('Europe/Moscow'))
+                    ->where('starts_at', '<', Carbon::now('Europe/Moscow'))
                     ->orderByDesc('starts_at')
                     ->orderByDesc('id')
                     ->limit(44)
@@ -111,171 +111,6 @@ class BetController extends Controller
 
         $coupons = Coupon::with(['bets.event'])->latest()->limit(50)->get();
 
-        // Здесь чисто тестовая фигня
-        $base = rtrim(config('services.sstats.base_url', 'https://api.sstats.net'), '/');
-        $key = config('services.sstats.key');
-        $headers = $key ? ['X-API-KEY' => $key] : [];
-        $dueEvents = Event::query()
-            ->where('status', '=', 'scheduled')
-            ->limit(20)
-            ->get();
-        foreach ($dueEvents as $ev) {
-            $extId = (string) ($ev->external_id ?? '');
-            $resp = $extId ? Http::withHeaders($headers)->timeout(20)->get($base.'/Games/list', ['id' => $extId]) : null;
-            $payload = $resp && !$resp->failed() ? ($resp->json('data.0') ?? $resp->json('data') ?? []) : [];
-            Debugbar::addMessage($payload , 'payload'); 
-            $homeScore = is_numeric(data_get($payload, 'homeResult')) ? (int) data_get($payload, 'homeResult') : null;
-            $awayScore = is_numeric(data_get($payload, 'awayResult')) ? (int) data_get($payload, 'awayResult') : null;
-            $homeSt1 = is_numeric(data_get($payload, 'homeResultSt1')) ? (int) data_get($payload, 'homeResultSt1') : null;
-            $awaySt1 = is_numeric(data_get($payload, 'awayResultSt1')) ? (int) data_get($payload, 'awayResultSt1') : null;
-            $homeSt2 = is_numeric(data_get($payload, 'homeResultSt2')) ? (int) data_get($payload, 'homeResultSt2') : null;
-            $awaySt2 = is_numeric(data_get($payload, 'awayResultSt2')) ? (int) data_get($payload, 'awayResultSt2') : null;
-            if ($homeSt2 === null && $awaySt2 === null && $homeScore !== null && $awayScore !== null && $homeSt1 !== null && $awaySt1 !== null) {
-                $homeSt2 = max(0, $homeScore - $homeSt1);
-                $awaySt2 = max(0, $awayScore - $awaySt1);
-            }
-            if ($homeScore === null || $awayScore === null) { $homeScore = 0; $awayScore = 0; }
-            $ev->home_result = $homeScore; $ev->away_result = $awayScore;
-            $ev->home_ht_result = $homeSt1; $ev->away_ht_result = $awaySt1;
-            $ev->home_st2_result = $homeSt2; $ev->away_st2_result = $awaySt2;
-            $ev->result = $homeScore === $awayScore ? 'draw' : ($homeScore > $awayScore ? 'home' : 'away');
-            $ev->result_text = 'HT(' . ($homeSt1 ?? 0) . ':' . ($awaySt1 ?? 0) . ') 2T(' . ($homeSt2 ?? 0) . ':' . ($awaySt2 ?? 0) . ') FT ' . ($homeScore ?? 0) . ':' . ($awayScore ?? 0);
-            $ev->save();
-            $ev->bets()->whereNull('settled_at')->each(function (Bet $bet) use ($homeScore, $awayScore, $homeSt1, $awaySt1, $homeSt2, $awaySt2, $ev) {
-                $market = trim((string) ($bet->market ?? ''));
-                $selection = trim(strtolower((string) $bet->selection));
-                $amount = (float) ($bet->amount_demo ?? 0);
-                $odds = (float) ($bet->placed_odds ?? 0);
-                $win = false; $payout = 0.0; $settled = false;
-                if ($market === '' || in_array($selection, ['home','draw','away'], true)) {
-                    $win = ($selection === 'home' && $homeScore > $awayScore) || ($selection === 'away' && $awayScore > $homeScore) || ($selection === 'draw' && $homeScore === $awayScore);
-                    $settled = true;
-                } elseif (stripos($market, '2 тайм') !== false) {
-                    if ($homeSt2 !== null && $awaySt2 !== null) {
-                        $win = ($selection === 'home' && $homeSt2 > $awaySt2) || ($selection === 'away' && $awaySt2 > $homeSt2) || ($selection === 'draw' && $homeSt2 === $awaySt2);
-                        $settled = true;
-                    }
-                } elseif (stripos($market, 'тоталы 1 тайм') !== false) {
-                    if ($homeSt1 !== null && $awaySt1 !== null) {
-                        $total = $homeSt1 + $awaySt1;
-                        if (preg_match('/^(over|under)\s*([0-9]+(?:\.[0-9]+)?)$/i', $bet->selection, $m)) {
-                            $type = strtolower($m[1]); $line = (float) $m[2];
-                            if ($type === 'over') {
-                                if ($total > $line) { $win = true; }
-                                elseif ($total == $line) { $payout = $amount; }
-                                else { $win = false; }
-                            } else {
-                                if ($total < $line) { $win = true; }
-                                elseif ($total == $line) { $payout = $amount; }
-                                else { $win = false; }
-                            }
-                            $settled = true;
-                        }
-                    }
-                } elseif (stripos($market, 'тоталы 2 тайм') !== false) {
-                    if ($homeSt2 !== null && $awaySt2 !== null) {
-                        $total = $homeSt2 + $awaySt2;
-                        if (preg_match('/^(over|under)\s*([0-9]+(?:\.[0-9]+)?)$/i', $bet->selection, $m)) {
-                            $type = strtolower($m[1]); $line = (float) $m[2];
-                            if ($type === 'over') {
-                                if ($total > $line) { $win = true; }
-                                elseif ($total == $line) { $payout = $amount; }
-                                else { $win = false; }
-                            } else {
-                                if ($total < $line) { $win = true; }
-                                elseif ($total == $line) { $payout = $amount; }
-                                else { $win = false; }
-                            }
-                            $settled = true;
-                        }
-                    }
-                } elseif (stripos($market, 'тоталы') !== false) {
-                    $total = $homeScore + $awayScore;
-                    if (preg_match('/^(over|under)\s*([0-9]+(?:\.[0-9]+)?)$/i', $bet->selection, $m)) {
-                        $type = strtolower($m[1]); $line = (float) $m[2];
-                        if (fmod($line, 0.5) === 0.25) {
-                            $lower = $line - 0.25; $upper = $line + 0.25;
-                            $winLower = $type === 'over' ? ($total > $lower) : ($total < $lower);
-                            $winUpper = $type === 'over' ? ($total > $upper) : ($total < $upper);
-                            $win = $winLower && $winUpper;
-                            if (!$win && ($winLower || $winUpper)) { $payout = $amount * $odds * 0.5; }
-                            $settled = true;
-                        } else {
-                            if ($type === 'over') {
-                                if ($total > $line) { $win = true; $settled = true; }
-                                elseif ($total == $line) { $payout = $amount; $settled = true; }
-                                else { $win = false; $settled = true; }
-                            } else {
-                                if ($total < $line) { $win = true; $settled = true; }
-                                elseif ($total == $line) { $payout = $amount; $settled = true; }
-                                else { $win = false; $settled = true; }
-                            }
-                        }
-                    }
-                } elseif (stripos($market, 'обе забьют') !== false) {
-                    $yes = strpos($bet->selection, 'Yes') !== false || strpos($bet->selection, 'Да') !== false;
-                    $no = strpos($bet->selection, 'No') !== false || strpos($bet->selection, 'Нет') !== false;
-                    if ($yes || $no) { $win = $yes ? ($homeScore > 0 && $awayScore > 0) : !($homeScore > 0 && $awayScore > 0); $settled = true; }
-                } elseif (preg_match('/^1\s*забьет/i', $market)) {
-                    $yes = strpos($bet->selection, 'Yes') !== false || strpos($bet->selection, 'Да') !== false;
-                    $no = strpos($bet->selection, 'No') !== false || strpos($bet->selection, 'Нет') !== false;
-                    if ($yes || $no) { $win = $yes ? ($homeScore > 0) : ($homeScore === 0); $settled = true; }
-                } elseif (preg_match('/^2\s*забьет/i', $market)) {
-                    $yes = strpos($bet->selection, 'Yes') !== false || strpos($bet->selection, 'Да') !== false;
-                    $no = strpos($bet->selection, 'No') !== false || strpos($bet->selection, 'Нет') !== false;
-                    if ($yes || $no) { $win = $yes ? ($awayScore > 0) : ($awayScore === 0); $settled = true; }
-                } elseif (stripos($market, 'азиатский гандикап') !== false || stripos($market, 'фора') !== false) {
-                    if (preg_match('/^(home|away)\s*([+-]?\d+(?:\.\d+)?)$/i', $bet->selection, $m)) {
-                        $team = strtolower($m[1]); $line = (float) $m[2];
-                        $adjHome = $homeScore + ($team === 'home' ? $line : 0);
-                        $adjAway = $awayScore + ($team === 'away' ? $line : 0);
-                        if (fmod($line, 0.5) === 0.25) {
-                            $l1 = $line - 0.25; $l2 = $line + 0.25;
-                            $adjHome1 = $homeScore + ($team === 'home' ? $l1 : 0);
-                            $adjAway1 = $awayScore + ($team === 'away' ? $l1 : 0);
-                            $adjHome2 = $homeScore + ($team === 'home' ? $l2 : 0);
-                            $adjAway2 = $awayScore + ($team === 'away' ? $l2 : 0);
-                            $win1 = $adjHome1 > $adjAway1; $win2 = $adjHome2 > $adjAway2;
-                            $win = $win1 && $win2;
-                            if (!$win && ($win1 || $win2)) { $payout = $amount * $odds * 0.5; }
-                            $settled = true;
-                        } else {
-                            if ($adjHome > $adjAway) { $win = true; $settled = true; }
-                            elseif ($adjHome == $adjAway) { $payout = $amount; $settled = true; }
-                            else { $win = false; $settled = true; }
-                        }
-                    }
-                } elseif (stripos($market, '1 тайм / 2 тайм') !== false) {
-                    if ($homeSt1 !== null && $awaySt1 !== null) {
-                        $fh = $homeSt1 === $awaySt1 ? 'draw' : ($homeSt1 > $awaySt1 ? 'home' : 'away');
-                        $ft = $homeScore === $awayScore ? 'draw' : ($homeScore > $awayScore ? 'home' : 'away');
-                        $parts = explode('/', str_replace(' ', '', strtolower($bet->selection)));
-                        if (count($parts) === 2) { $win = ($parts[0] === $fh && $parts[1] === $ft); $settled = true; }
-                    }
-                }
-                if ($settled) {
-                    $bet->is_win = ($payout === $amount && !$win) ? null : $win;
-                    if ($win) { $payout = $payout > 0 ? $payout : ($amount * ($odds ?: 1)); }
-                    $bet->payout_demo = $payout;
-                    $bet->settled_at = now('Europe/Moscow');
-                    $bet->save();
-                }
-            });
-            $affectedCouponIds = $ev->bets()->pluck('coupon_id')->filter()->unique();
-            foreach ($affectedCouponIds as $cid) {
-                $coupon = Coupon::with('bets.event')->find($cid);
-                if (!$coupon) continue;
-                $allSettled = $coupon->bets->every(fn($b) => $b->settled_at !== null);
-                if ($allSettled) {
-                    $allWin = $coupon->bets->every(fn($b) => $b->is_win === true);
-                    $coupon->is_win = $allWin;
-                    $coupon->payout_demo = $allWin ? ($coupon->amount_demo * ($coupon->total_odds ?? 1)) : 0;
-                    $coupon->settled_at = now('Europe/Moscow');
-                    $coupon->save();
-                }
-            }
-        }
-        // конец тестовой фигни
         return view('home', [
             'leagues' => $leagues,
             'coupons' => $coupons,
@@ -672,6 +507,7 @@ class BetController extends Controller
                     }
                 } elseif (stripos($market, 'тоталы') !== false) {
                     $total = $homeScore + $awayScore;
+                    Debugbar::addMessage($total, 'total');
                     if (preg_match('/^(over|under)\s*([0-9]+(?:\.[0-9]+)?)$/i', $bet->selection, $m)) {
                         $type = strtolower($m[1]); $line = (float) $m[2];
                         if (fmod($line, 0.5) === 0.25) {
@@ -951,8 +787,9 @@ class BetController extends Controller
             ->where('status', 'scheduled')
             ->whereNotNull('starts_at')
             ->where('starts_at', '<=', $now)
-            ->limit(2)
+            ->limit(20)
             ->get();
+        Debugbar::addMessage($events->toArray(), 'events');
         foreach ($events as $ev) {
             $extId = (string) ($ev->external_id ?? '');
             if (!$extId) { continue; }
@@ -982,7 +819,214 @@ class BetController extends Controller
             $ev->ends_at = Carbon::now('Europe/Moscow');
             $ev->save();
         }
-        return redirect()->route('home')->with('status', 'Обработка завершена');
+        // return redirect()->route('home')->with('status', 'Обработка завершена');
+    }
+
+    public function settleUnsettledBets()
+    {
+        $base = rtrim(config('services.sstats.base_url', 'https://api.sstats.net'), '/');
+        $key = config('services.sstats.key');
+        $headers = $key ? ['X-API-KEY' => $key] : [];
+        $bets = Bet::with('event')->whereNull('settled_at')->orderBy('id')->limit(10)->get();
+        $byEvent = $bets->groupBy('event_id');
+        
+        foreach ($byEvent as $eventId => $items) {
+            $ev = $items->first()->event;
+            Debugbar::addMessage($ev->toArray(), 'ev');
+            if (!$ev) { continue; }
+            $homeScore = is_numeric($ev->home_result) ? (int) $ev->home_result : null;
+            $awayScore = is_numeric($ev->away_result) ? (int) $ev->away_result : null;
+            $homeSt1 = is_numeric($ev->home_ht_result) ? (int) $ev->home_ht_result : null;
+            $awaySt1 = is_numeric($ev->away_ht_result) ? (int) $ev->away_ht_result : null;
+            $homeSt2 = is_numeric($ev->home_st2_result) ? (int) $ev->home_st2_result : null;
+            $awaySt2 = is_numeric($ev->away_st2_result) ? (int) $ev->away_st2_result : null;
+            if ($homeScore === null || $awayScore === null) {
+                $payload = [];
+                if ($ev->external_id) {
+                    $resp = Http::withHeaders($headers)->timeout(20)->get($base.'/Games/list', ['id' => $ev->external_id]);
+                    if ($resp && !$resp->failed()) {
+                        $payload = $resp->json('data.0') ?? $resp->json('data') ?? [];
+                    }
+                }
+                if (empty($payload)) {
+                    try {
+                        $path = base_path('result_test.json');
+                        if (is_file($path)) {
+                            $data = json_decode(file_get_contents($path), true);
+                            $rows = data_get($data, 'data', []);
+                            foreach ((array)$rows as $row) {
+                                $h = trim((string) data_get($row, 'homeTeam.name'));
+                                $a = trim((string) data_get($row, 'awayTeam.name'));
+                                $title = trim((string) ($ev->home_team.' vs '.$ev->away_team));
+                                if (($h && $a) && (mb_strtolower($h) === mb_strtolower((string)$ev->home_team)) && (mb_strtolower($a) === mb_strtolower((string)$ev->away_team))) { $payload = $row; break; }
+                                $rowTitle = trim((string) (data_get($row, 'homeTeam.name').' vs '.data_get($row, 'awayTeam.name')));
+                                if (mb_strtolower($rowTitle) === mb_strtolower($title)) { $payload = $row; break; }
+                            }
+                        }
+                    } catch (\Throwable $e) {}
+                }
+                if (!empty($payload)) {
+                    $homeScore = is_numeric(data_get($payload, 'homeResult')) ? (int) data_get($payload, 'homeResult') : null;
+                    $awayScore = is_numeric(data_get($payload, 'awayResult')) ? (int) data_get($payload, 'awayResult') : null;
+                    $homeSt1 = is_numeric(data_get($payload, 'homeHTResult')) ? (int) data_get($payload, 'homeHTResult') : (is_numeric(data_get($payload, 'homeResultSt1')) ? (int) data_get($payload, 'homeResultSt1') : $homeSt1);
+                    $awaySt1 = is_numeric(data_get($payload, 'awayHTResult')) ? (int) data_get($payload, 'awayHTResult') : (is_numeric(data_get($payload, 'awayResultSt1')) ? (int) data_get($payload, 'awayResultSt1') : $awaySt1);
+                    $homeSt2 = is_numeric(data_get($payload, 'homeResultSt2')) ? (int) data_get($payload, 'homeResultSt2') : $homeSt2;
+                    $awaySt2 = is_numeric(data_get($payload, 'awayResultSt2')) ? (int) data_get($payload, 'awayResultSt2') : $awaySt2;
+                }
+                if ($homeSt2 === null && $awaySt2 === null && $homeScore !== null && $awayScore !== null && $homeSt1 !== null && $awaySt1 !== null) {
+                    $homeSt2 = max(0, $homeScore - $homeSt1);
+                    $awaySt2 = max(0, $awayScore - $awaySt1);
+                }
+                if ($homeScore !== null && $awayScore !== null) {
+                    $ev->home_result = $homeScore; $ev->away_result = $awayScore;
+                    $ev->home_ht_result = $homeSt1; $ev->away_ht_result = $awaySt1;
+                    $ev->home_st2_result = $homeSt2; $ev->away_st2_result = $awaySt2;
+                    $ev->result = $homeScore === $awayScore ? 'draw' : ($homeScore > $awayScore ? 'home' : 'away');
+                    $ev->result_text = 'HT(' . ($homeSt1 ?? 0) . ':' . ($awaySt1 ?? 0) . ') 2T(' . ($homeSt2 ?? 0) . ':' . ($awaySt2 ?? 0) . ') FT ' . ($homeScore ?? 0) . ':' . ($awayScore ?? 0);
+                    if ($ev->status !== 'finished') { $ev->status = 'finished'; $ev->ends_at = Carbon::now('Europe/Moscow'); }
+                    $ev->save();
+                }
+            }
+            if ($homeScore === null || $awayScore === null) { continue; }
+            
+            foreach ($items as $bet) {
+                $market = trim((string) ($bet->market ?? ''));
+                $selection = trim(strtolower((string) $bet->selection));
+                $amount = (float) ($bet->amount_demo ?? 0);
+                $odds = (float) ($bet->placed_odds ?? 0);
+                $win = false; $payout = 0.0; $settled = false;
+                Debugbar::addMessage($market, 'market');
+                Debugbar::addMessage(stripos($market, 'тоталы') !== false, 'isTotals');
+                if ($market === '' || in_array($selection, ['home','draw','away'], true)) {
+                    $win = ($selection === 'home' && $homeScore > $awayScore) || ($selection === 'away' && $awayScore > $homeScore) || ($selection === 'draw' && $homeScore === $awayScore);
+                    $settled = true;
+                } elseif (stripos($market, '2 тайм') !== false) {
+                    if ($homeSt2 !== null && $awaySt2 !== null) {
+                        $win = ($selection === 'home' && $homeSt2 > $awaySt2) || ($selection === 'away' && $awaySt2 > $homeSt2) || ($selection === 'draw' && $homeSt2 === $awaySt2);
+                        $settled = true;
+                    }
+                } elseif (stripos($market, 'тоталы 1 тайм') !== false) {
+                    if ($homeSt1 !== null && $awaySt1 !== null) {
+                        $total = $homeSt1 + $awaySt1;
+                        if (preg_match('/^(over|under)\s*([0-9]+(?:\.[0-9]+)?)$/i', $bet->selection, $m)) {
+                            $type = strtolower($m[1]); $line = (float) $m[2];
+                            if ($type === 'over') {
+                                if ($total > $line) { $win = true; }
+                                elseif ($total == $line) { $payout = $amount; }
+                                else { $win = false; }
+                            } else {
+                                if ($total < $line) { $win = true; }
+                                elseif ($total == $line) { $payout = $amount; }
+                                else { $win = false; }
+                            }
+                            $settled = true;
+                        }
+                    }
+                } elseif (stripos($market, 'тоталы 2 тайм') !== false) {
+                    if ($homeSt2 !== null && $awaySt2 !== null) {
+                        $total = $homeSt2 + $awaySt2;
+                        if (preg_match('/^(over|under)\s*([0-9]+(?:\.[0-9]+)?)$/i', $bet->selection, $m)) {
+                            $type = strtolower($m[1]); $line = (float) $m[2];
+                            if ($type === 'over') {
+                                if ($total > $line) { $win = true; }
+                                elseif ($total == $line) { $payout = $amount; }
+                                else { $win = false; }
+                            } else {
+                                if ($total < $line) { $win = true; }
+                                elseif ($total == $line) { $payout = $amount; }
+                                else { $win = false; }
+                            }
+                            $settled = true;
+                        }
+                    }
+                } elseif (stripos($market, 'тоталы') !== false) {
+                    $total = $homeScore + $awayScore;
+                    Debugbar::addMessage($total, 'total');
+                    if (preg_match('/^(over|under)\s*([0-9]+(?:\.[0-9]+)?)$/i', $bet->selection, $m)) {
+                        $type = strtolower($m[1]); $line = (float) $m[2];
+                        if (fmod($line, 0.5) === 0.25) {
+                            $lower = $line - 0.25; $upper = $line + 0.25;
+                            $winLower = $type === 'over' ? ($total > $lower) : ($total < $lower);
+                            $winUpper = $type === 'over' ? ($total > $upper) : ($total < $upper);
+                            $win = $winLower && $winUpper;
+                            if (!$win && ($winLower || $winUpper)) { $payout = $amount * $odds * 0.5; }
+                            $settled = true;
+                        } else {
+                            if ($type === 'over') {
+                                if ($total > $line) { $win = true; $settled = true; }
+                                elseif ($total == $line) { $payout = $amount; $settled = true; }
+                                else { $win = false; $settled = true; }
+                            } else {
+                                if ($total < $line) { $win = true; $settled = true; }
+                                elseif ($total == $line) { $payout = $amount; $settled = true; }
+                                else { $win = false; $settled = true; }
+                            }
+                        }
+                    }
+                } elseif (stripos($market, 'обе забьют') !== false) {
+                    $yes = strpos($bet->selection, 'Yes') !== false || strpos($bet->selection, 'Да') !== false;
+                    $no = strpos($bet->selection, 'No') !== false || strpos($bet->selection, 'Нет') !== false;
+                    if ($yes || $no) { $win = $yes ? ($homeScore > 0 && $awayScore > 0) : !($homeScore > 0 && $awayScore > 0); $settled = true; }
+                } elseif (preg_match('/^1\s*забьет/i', $market)) {
+                    $yes = strpos($bet->selection, 'Yes') !== false || strpos($bet->selection, 'Да') !== false;
+                    $no = strpos($bet->selection, 'No') !== false || strpos($bet->selection, 'Нет') !== false;
+                    if ($yes || $no) { $win = $yes ? ($homeScore > 0) : ($homeScore === 0); $settled = true; }
+                } elseif (preg_match('/^2\s*забьет/i', $market)) {
+                    $yes = strpos($bet->selection, 'Yes') !== false || strpos($bet->selection, 'Да') !== false;
+                    $no = strpos($bet->selection, 'No') !== false || strpos($bet->selection, 'Нет') !== false;
+                    if ($yes || $no) { $win = $yes ? ($awayScore > 0) : ($awayScore === 0); $settled = true; }
+                } elseif (stripos($market, 'азиатский гандикап') !== false || stripos($market, 'фора') !== false) {
+                    if (preg_match('/^(home|away)\s*([+-]?\d+(?:\.\d+)?)$/i', $bet->selection, $m)) {
+                        $team = strtolower($m[1]); $line = (float) $m[2];
+                        $adjHome = $homeScore + ($team === 'home' ? $line : 0);
+                        $adjAway = $awayScore + ($team === 'away' ? $line : 0);
+                        if (fmod($line, 0.5) === 0.25) {
+                            $l1 = $line - 0.25; $l2 = $line + 0.25;
+                            $adjHome1 = $homeScore + ($team === 'home' ? $l1 : 0);
+                            $adjAway1 = $awayScore + ($team === 'away' ? $l1 : 0);
+                            $adjHome2 = $homeScore + ($team === 'home' ? $l2 : 0);
+                            $adjAway2 = $awayScore + ($team === 'away' ? $l2 : 0);
+                            $win1 = $adjHome1 > $adjAway1; $win2 = $adjHome2 > $adjAway2;
+                            $win = $win1 && $win2;
+                            if (!$win && ($win1 || $win2)) { $payout = $amount * $odds * 0.5; }
+                            $settled = true;
+                        } else {
+                            if ($adjHome > $adjAway) { $win = true; $settled = true; }
+                            elseif ($adjHome == $adjAway) { $payout = $amount; $settled = true; }
+                            else { $win = false; $settled = true; }
+                        }
+                    }
+                } elseif (stripos($market, '1 тайм / 2 тайм') !== false) {
+                    if ($homeSt1 !== null && $awaySt1 !== null) {
+                        $fh = $homeSt1 === $awaySt1 ? 'draw' : ($homeSt1 > $awaySt1 ? 'home' : 'away');
+                        $ft = $homeScore === $awayScore ? 'draw' : ($homeScore > $awayScore ? 'home' : 'away');
+                        $parts = explode('/', str_replace(' ', '', strtolower($bet->selection)));
+                        if (count($parts) === 2) { $win = ($parts[0] === $fh && $parts[1] === $ft); $settled = true; }
+                    }
+                }
+                if ($settled) {
+                    $bet->is_win = ($payout === $amount && !$win) ? null : $win;
+                    if ($win) { $payout = $payout > 0 ? $payout : ($amount * ($odds ?: 1)); }
+                    $bet->payout_demo = $payout;
+                    $bet->settled_at = now('Europe/Moscow');
+                    $bet->save();
+                }
+            }
+            $affectedCouponIds = $items->pluck('coupon_id')->filter()->unique();
+            foreach ($affectedCouponIds as $cid) {
+                $coupon = Coupon::with('bets.event')->find($cid);
+                if (!$coupon) continue;
+                $allSettled = $coupon->bets->every(fn($b) => $b->settled_at !== null);
+                if ($allSettled) {
+                    $allWin = $coupon->bets->every(fn($b) => $b->is_win === true);
+                    $coupon->is_win = $allWin;
+                    $coupon->payout_demo = $allWin ? ($coupon->amount_demo * ($coupon->total_odds ?? 1)) : 0;
+                    $coupon->settled_at = now('Europe/Moscow');
+                    $coupon->save();
+                }
+            }
+        }
+        return redirect()->route('home')->with('status', 'Нерассчитанные ставки обработаны');
     }
     // Note: Resolver removed in favor of direct tournament fetch by ID for deterministic EPL output.
 }

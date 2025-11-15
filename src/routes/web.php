@@ -29,6 +29,7 @@ Route::get('/events/sync-results', [BetController::class, 'syncResults'])->name(
 Route::get('/events/{event}/settle-test', [BetController::class, 'settleByTest'])->name('events.settle_test');
 Route::get('/events/settle-test/{externalId}', [BetController::class, 'settleByTestExternal'])->name('events.settle_test_external');
 Route::get('/events/process-due', [BetController::class, 'processDueScheduled100'])->name('events.process_due');
+Route::get('/bets/settle-unsettled', [BetController::class, 'settleUnsettledBets'])->name('bets.settle_unsettled');
 // Page removed per request
 
 // Statistics page (public access)
