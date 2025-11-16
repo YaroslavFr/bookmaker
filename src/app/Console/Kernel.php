@@ -20,6 +20,9 @@ class Kernel extends ConsoleKernel
             $schedule->command('epl:sync-odds --limit=10')->dailyAt('06:00');
         }
 
+        // Мультилиговая синхронизация предстоящих матчей каждые 5 минут
+        $schedule->command('leagues:sync-upcoming --limit=15')->everyFiveMinutes()->withoutOverlapping()->name('leagues:sync-upcoming');
+
         // Daily refresh for stats cache
         $schedule->command('stats:refresh')->dailyAt('03:30');
 

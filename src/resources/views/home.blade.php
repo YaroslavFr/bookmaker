@@ -17,7 +17,10 @@
     <main>
         <div class="container">
             <div class="row">
-                <h1 class="text-2xl font-bold mt-6 mb-6">Линия событий</h1>
+                <h1 class="text-2xl font-bold mt-6 mb-2">Линия событий</h1>
+                @if(auth()->check() && strtolower((string) (auth()->user()->role ?? '')) === 'admin')
+                    <div class="muted mb-4">Последнее обновление: {{ $lastSyncAt ? $lastSyncAt->copy()->tz(config('app.timezone'))->format('d.m.Y H:i:s') : '—' }}</div>
+                @endif
             </div>
             <div id="mainrow" class="grid grid-cols-1 md:grid-cols-[7fr_3fr] gap-4">
                 <div>

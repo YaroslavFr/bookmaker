@@ -55,4 +55,5 @@ Route::middleware([\App\Http\Middleware\AdminPanelOnly::class])->group(function 
     Route::get('/admin', [AdminController::class, 'index'])->name('admin.index');
     Route::get('/admin/users/create', [AdminController::class, 'create'])->name('admin.users.create');
     Route::post('/admin/users', [AdminController::class, 'store'])->name('admin.users.store');
+    Route::get('/admin/events/sync-upcoming', [AdminController::class, 'syncUpcoming'])->name('admin.events.sync_upcoming');
 });

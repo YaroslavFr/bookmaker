@@ -15,6 +15,11 @@
                class="text-blue-600 hover:underline {{ request()->is('docs') ? 'font-semibold' : '' }}"
                aria-current="{{ request()->is('docs') ? 'page' : '' }}">Документация</a>
         </li>
+        @if(auth()->check() && strtolower((string) (auth()->user()->role ?? '')) === 'admin')
+        <li>
+            <a href="{{ url('/admin') }}" class="btn btn-primary">Админ-панель</a>
+        </li>
+        @endif
         
     </ul>
 </nav>
