@@ -20,7 +20,8 @@
                 <h1 class="text-2xl font-bold mt-6 mb-2">Линия событий</h1>
                 @if(auth()->check() && strtolower((string) (auth()->user()->role ?? '')) === 'admin')
                     <div class="px-8 mb-4">
-                        <a href="{{ route('bets.settle_unsettled') }}" class="btn btn-primary js-settle-unsettled">Рассчитать нерассчитанные ставки</a>
+                        <a href="{{ route('bets.settle_unsettled') }}" class="btn btn-primary js-settle-unsettled">Рассчитать нерассчитанные ставки js-settle-unsettled</a>
+                        <a href="{{ route('bets.autoSettleDue') }}" class="btn btn-primary js-autoSettleDue"> js-autoSettleDue</a>
                     </div>
                 @endif
             </div>
@@ -201,6 +202,22 @@
                         alert('Обработка выполнена');
                     } else {
                         alert('Ошибка обработки');
+                    }
+                } catch (err) {
+                    alert('Сетевой сбой');
+                }
+                return;
+            }
+            const autoBtn = e.target.closest('.js-autoSettleDue');
+            if (autoBtn) {
+                e.preventDefault();
+                try {
+                    const resp = await fetch(autoBtn.getAttribute('href'), { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } });
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        alert('Авторасчёт выполнен');
+                    } else {
+                        alert('Ошибка авторасчёта');
                     }
                 } catch (err) {
                     alert('Сетевой сбой');

@@ -418,15 +418,16 @@ class BetController extends Controller
         }
     }
     
-    public function autoSettleDue()
+    public function autoSettleDue(Request $request)
     {
         $base = rtrim(config('services.sstats.base_url', 'https://api.sstats.net'), '/');
         $key = config('services.sstats.key');
         $headers = $key ? ['X-API-KEY' => $key] : [];
         $dueEvents = Event::query()
             ->where('status', '=', 'finished')
-            ->limit(200)
+            ->limit(10)
             ->get();
+            Debugbar::addMessage($dueEvents->toArray(), 'dueEvents');
         foreach ($dueEvents as $ev) {
             $extId = (string) ($ev->external_id ?? '');
             $resp = $extId ? Http::withHeaders($headers)->timeout(20)->get($base.'/Games/list', ['id' => $extId]) : null;
@@ -514,7 +515,7 @@ class BetController extends Controller
                     }
                 } elseif (stripos($market, 'тоталы') !== false) {
                     $total = $homeScore + $awayScore;
-                    Debugbar::addMessage($total, 'total');
+                    
                     if (preg_match('/^(over|under)\s*([0-9]+(?:\.[0-9]+)?)$/i', $bet->selection, $m)) {
                         $type = strtolower($m[1]); $line = (float) $m[2];
                         if (fmod($line, 0.5) === 0.25) {
@@ -598,6 +599,11 @@ class BetController extends Controller
                     $coupon->save();
                 }
             }
+        }
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'status' => 'ok',
+            ]);
         }
         return redirect()->route('home')->with('status', 'Авторасчёт завершён');
     }
