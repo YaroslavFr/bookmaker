@@ -109,7 +109,18 @@
                                 <div class="rt-cell" data-label="Сумма">{{ $coupon->amount_demo ? number_format($coupon->amount_demo, 2) : '—' }}</div>
                                 <div class="rt-cell" data-label="Итоговый кэф">{{ $coupon->total_odds ? number_format($coupon->total_odds, 2) : '—' }}</div>
                                 <div class="rt-cell" data-label="Потенц. выплата">{{ $potential ? number_format($potential, 2) : '—' }}</div>
-                                <div class="rt-cell text-xs {{ $coupon->is_win === null ? 'text-gray-500' : ($coupon->is_win ? 'text-green-500' : 'text-red-600') }}" data-label="Статус">{{ $coupon->is_win === null ? 'Не рассчитано' : ($coupon->is_win ? 'Выиграно' : 'Проигрыш') }}</div>
+                                @php($ftScores = collect($coupon->bets ?? [])->map(function($b){
+                                    $e = $b->event ?? null;
+                                    $hr = is_numeric($e->home_result ?? null) ? (int) $e->home_result : null;
+                                    $ar = is_numeric($e->away_result ?? null) ? (int) $e->away_result : null;
+                                    return ($hr !== null && $ar !== null) ? ($hr.':'.$ar) : null;
+                                })->filter()->unique()->values())
+                                <div class="rt-cell text-xs {{ $coupon->is_win === null ? 'text-gray-500' : ($coupon->is_win ? 'text-green-500' : 'text-red-600') }}" data-label="Статус">
+                                    {{ $coupon->is_win === null ? 'Не рассчитано' : ($coupon->is_win ? 'Выиграно' : 'Проигрыш') }}
+                                    @if($ftScores->count())
+                                        <div class="muted">Счёт: {{ implode(', ', $ftScores->all()) }}</div>
+                                    @endif
+                                </div>
                                 <div class="rt-cell" data-label="Дата расчета">{{ $settlementAt ? $settlementAt->format('Y-m-d H:i') : '—' }}</div>
                                 <div class="rt-cell text-xs" data-label="Дата ставки">{{ $coupon->created_at ? $coupon->created_at->format('Y-m-d H:i') : '—' }}</div>
                             </div>
