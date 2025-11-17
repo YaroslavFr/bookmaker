@@ -777,7 +777,7 @@ class BetController extends Controller
                         $win = ($h === $homeScore && $a === $awayScore);
                         $settled = true;
                     }
-                } elseif (stripos($market, 'тоталы') !== false) {
+                } elseif (stripos($market, 'Тоталы') !== false) {
                     $total = $homeScore + $awayScore;
                     Debugbar::addMessage($total, 'total');
                     if (preg_match('/^(over|under)\s*([0-9]+(?:\.[0-9]+)?)$/i', $bet->selection, $m)) {
