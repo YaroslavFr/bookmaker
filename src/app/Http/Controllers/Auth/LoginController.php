@@ -31,11 +31,6 @@ class LoginController extends Controller
 
         if (Auth::attempt($credentials, $remember)) {
             $request->session()->regenerate();
-            $user = Auth::user();
-            $role = method_exists($user, 'getAttribute') ? $user->getAttribute('role') : null;
-            if (strtolower((string) $role) === 'admin') {
-                return redirect()->intended(route('admin.index'));
-            }
             return redirect()->intended(route('home'));
         }
 

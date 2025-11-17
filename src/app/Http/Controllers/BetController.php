@@ -21,7 +21,6 @@ class BetController extends Controller
         // Рендер полностью развязан от обновлений: только чтение из БД.
         $marketsMap = [];
         $gameIdsMap = [];
-        $lastSyncAt = \Illuminate\Support\Facades\Cache::get('leagues_sync_last_at');
 
         // Формируем человекочитаемые заголовки без канонизации: используем "сырые" названия.
         $prepareForView = function ($collection) {
@@ -108,7 +107,6 @@ class BetController extends Controller
             'coupons' => $coupons,
             'marketsMap' => $marketsMap,
             'gameIdsMap' => $gameIdsMap,
-            'lastSyncAt' => $lastSyncAt,
         ]);
     }
 
@@ -498,6 +496,22 @@ class BetController extends Controller
                             $settled = true;
                         }
                     }
+                } elseif (stripos($market, 'точный счет') !== false || stripos($market, 'exact score') !== false) {
+                    if ($homeScore !== null && $awayScore !== null && preg_match('/^(\d+)\s*[:\-]\s*(\d+)$/', (string) $bet->selection, $m)) {
+                        $h = (int) $m[1];
+                        $a = (int) $m[2];
+                        $win = ($h === $homeScore && $a === $awayScore);
+                        $settled = true;
+                    }
+                } elseif (preg_match('/^\d+\s*[:\-]\s*\d+$/', (string) $bet->selection)) {
+                    if ($homeScore !== null && $awayScore !== null) {
+                        if (preg_match('/^(\d+)\s*[:\-]\s*(\d+)$/', (string) $bet->selection, $m)) {
+                            $h = (int) $m[1];
+                            $a = (int) $m[2];
+                            $win = ($h === $homeScore && $a === $awayScore);
+                            $settled = true;
+                        }
+                    }
                 } elseif (stripos($market, 'тоталы') !== false) {
                     $total = $homeScore + $awayScore;
                     Debugbar::addMessage($total, 'total');
@@ -633,16 +647,23 @@ class BetController extends Controller
         // return redirect()->route('home')->with('status', 'Обработка завершена');
     }
 
-    public function settleUnsettledBets()
+    public function settleUnsettledBets(Request $request)
     {
         $base = rtrim(config('services.sstats.base_url', 'https://api.sstats.net'), '/');
         $key = config('services.sstats.key');
         $headers = $key ? ['X-API-KEY' => $key] : [];
-        $bets = Bet::with('event')->whereNull('settled_at')->orderBy('id')->limit(10)->get();
+        $query = Bet::with('event')->whereNull('settled_at');
+        $eventId = (int) $request->query('event_id', 0);
+        $betId = (int) $request->query('bet_id', 0);
+        if ($betId > 0) { $query->where('id', $betId); }
+        if ($eventId > 0) { $query->where('event_id', $eventId); }
+        $bets = $query->orderBy('id')->limit($betId > 0 || $eventId > 0 ? 100 : 10)->get();
         $byEvent = $bets->groupBy('event_id');
         
+        $changed = [];
         foreach ($byEvent as $eventId => $items) {
             $ev = $items->first()->event;
+            Debugbar::addMessage($items->toArray(), 'items');
             Debugbar::addMessage($ev->toArray(), 'ev');
             if (!$ev) { continue; }
             $homeScore = is_numeric($ev->home_result) ? (int) $ev->home_result : null;
@@ -707,7 +728,6 @@ class BetController extends Controller
                 $odds = (float) ($bet->placed_odds ?? 0);
                 $win = false; $payout = 0.0; $settled = false;
                 Debugbar::addMessage($market, 'market');
-                Debugbar::addMessage(stripos($market, 'тоталы') !== false, 'isTotals');
                 if ($market === '' || in_array($selection, ['home','draw','away'], true)) {
                     $win = ($selection === 'home' && $homeScore > $awayScore) || ($selection === 'away' && $awayScore > $homeScore) || ($selection === 'draw' && $homeScore === $awayScore);
                     $settled = true;
@@ -749,6 +769,13 @@ class BetController extends Controller
                             }
                             $settled = true;
                         }
+                    }
+                } elseif (stripos($market, 'точный счет') !== false || stripos($market, 'exact score') !== false) {
+                    if ($homeScore !== null && $awayScore !== null && preg_match('/^(\d+)\s*[:\-]\s*(\d+)$/', (string) $bet->selection, $m)) {
+                        $h = (int) $m[1];
+                        $a = (int) $m[2];
+                        $win = ($h === $homeScore && $a === $awayScore);
+                        $settled = true;
                     }
                 } elseif (stripos($market, 'тоталы') !== false) {
                     $total = $homeScore + $awayScore;
@@ -821,6 +848,7 @@ class BetController extends Controller
                     $bet->payout_demo = $payout;
                     $bet->settled_at = now();
                     $bet->save();
+                    $changed[] = $bet->id;
                 }
             }
             $affectedCouponIds = $items->pluck('coupon_id')->filter()->unique();
@@ -836,6 +864,16 @@ class BetController extends Controller
                     $coupon->save();
                 }
             }
+        }
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'status' => 'ok',
+                'changed' => $changed,
+                'count' => count($changed),
+                'fetched' => $bets->pluck('id'),
+                'markets' => $bets->pluck('market'),
+                'selections' => $bets->pluck('selection'),
+            ]);
         }
         return redirect()->route('home')->with('status', 'Нерассчитанные ставки обработаны');
     }

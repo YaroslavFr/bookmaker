@@ -19,7 +19,9 @@
             <div class="row">
                 <h1 class="text-2xl font-bold mt-6 mb-2">Линия событий</h1>
                 @if(auth()->check() && strtolower((string) (auth()->user()->role ?? '')) === 'admin')
-                    <div class="muted mb-4">Последнее обновление: {{ $lastSyncAt ? $lastSyncAt->copy()->tz(config('app.timezone'))->format('d.m.Y H:i:s') : '—' }}</div>
+                    <div class="px-8 mb-4">
+                        <a href="{{ route('bets.settle_unsettled') }}" class="btn btn-primary js-settle-unsettled">Рассчитать нерассчитанные ставки</a>
+                    </div>
                 @endif
             </div>
             <div id="mainrow" class="grid grid-cols-1 md:grid-cols-[7fr_3fr] gap-4">
@@ -178,6 +180,22 @@
 
         // Extra markets toggler: при раскрытии делаем запрос /odds/game/{gameId}?bookmakerId=2
         document.addEventListener('click', async function(e) {
+            const settleBtn = e.target.closest('.js-settle-unsettled');
+            if (settleBtn) {
+                e.preventDefault();
+                try {
+                    const resp = await fetch(settleBtn.getAttribute('href'), { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } });
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        alert('Обработка выполнена');
+                    } else {
+                        alert('Ошибка обработки');
+                    }
+                } catch (err) {
+                    alert('Сетевой сбой');
+                }
+                return;
+            }
             const t = e.target.closest('.extra-toggle');
             if (!t) return;
             const targetId = t.getAttribute('data-target-id');
