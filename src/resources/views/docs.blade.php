@@ -590,7 +590,7 @@ docker compose exec app vendor/bin/envoy list
 docker compose exec app vendor/bin/envoy run release --server=beget --branch=main
 
 # Запустить релиз локально (если PHP установлен и вы в каталоге src)
-php8.4 vendor/bin/envoy run release --server=beget --branch=main
+php vendor/bin/envoy run release --server=beget --branch=main
 
 # Подсказка: чтобы увидеть список задач
 docker compose exec app vendor/bin/envoy tasks

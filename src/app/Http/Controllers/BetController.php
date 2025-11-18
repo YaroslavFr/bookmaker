@@ -336,7 +336,9 @@ class BetController extends Controller
 
         return redirect()->route('home')->with('status', 'Событие рассчитано');
     }
-
+    
+    // Проставление результатов.
+    // Автоматическое урегулирование ставок.
     public function autoSettleDue(Request $request)
     {
         $base = rtrim(config('services.sstats.base_url', 'https://api.sstats.net'), '/');
@@ -346,13 +348,16 @@ class BetController extends Controller
         try { Cache::put('cron:last_auto_settle', Carbon::now()->toDateTimeString(), 3600); } catch (\Throwable $e) {}
         // Берём external_id запланированных событий за сегодня + 6 часов
         $scheduledExternalIds = $this->checkResultSchedule();
-        if (class_exists(\Barryvdh\Debugbar\Facades\Debugbar::class)) {
-            \Barryvdh\Debugbar\Facades\Debugbar::addMessage($scheduledExternalIds, 'scheduledExternalIds');
-        }
+        
         foreach ($scheduledExternalIds as $extId) {
             $extId = (string) $extId;
             if ($extId === '') { continue; }
             $resp = Http::withHeaders($headers)->timeout(20)->get($base.'/Games/list', ['id' => $extId]);
+            
+            if (class_exists(\Barryvdh\Debugbar\Facades\Debugbar::class)) {
+                \Barryvdh\Debugbar\Facades\Debugbar::addMessage($extId, 'extId');
+            }
+            
             $payload = $resp && !$resp->failed() ? ($resp->json('data.0') ?? $resp->json('data') ?? []) : [];
             $homeScore = is_numeric(data_get($payload, 'homeResult')) ? (int) data_get($payload, 'homeResult') : null;
             $awayScore = is_numeric(data_get($payload, 'awayResult')) ? (int) data_get($payload, 'awayResult') : null;
@@ -366,6 +371,7 @@ class BetController extends Controller
             }
             if ($homeScore === null || $awayScore === null) { $homeScore = 0; $awayScore = 0; }
             $ev = Event::where('external_id', $extId)->first();
+            return;
             if (!$ev) { continue; }
             $ev->home_result = $homeScore; $ev->away_result = $awayScore;
             $ev->home_ht_result = $homeSt1; $ev->away_ht_result = $awaySt1;

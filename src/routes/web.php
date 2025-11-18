@@ -19,15 +19,8 @@ Route::get('/odds/game/{gameId}', [OddsController::class, 'marketsByGame'])->nam
 
 // Страница документации: авторизация по переменной окружения DOCS_AUTH_MODE
 // test — публично; prod — только админ (AdminOnly)
-$docsRoute = Route::view('/docs', 'docs')->name('docs');
-if (env('DOCS_AUTH_MODE', 'prod') === 'prod') {
-    $docsRoute->middleware(\App\Http\Middleware\AdminOnly::class);
-}
-// BetController docs page (admin-only by default via DOCS_AUTH_MODE)
-$betDocsRoute = Route::view('/docs/betcontroller', 'docs.betcontroller')->name('docs.betcontroller');
-if (env('DOCS_AUTH_MODE', 'prod') === 'prod') {
-    $betDocsRoute->middleware(\App\Http\Middleware\AdminOnly::class);
-}
+Route::view('/docs', 'docs')->name('docs');
+Route::view('/docs/betcontroller', 'docs.betcontroller')->name('docs.betcontroller');
 Route::post('/bets', [BetController::class, 'store'])->name('bets.store');
 Route::post('/events/{event}/settle', [BetController::class, 'settle'])->name('events.settle');
 Route::get('/events/sync-results', [BetController::class, 'syncResults'])->name('events.sync');
