@@ -320,117 +320,20 @@ class BetController extends Controller
         return redirect()->route('home')->with('status', 'Событие рассчитано');
     }
 
-    public function syncResults()
-    {
-        try {
-            // Use sstats.net as the single source of truth for ended games
-            $base = rtrim(config('services.sstats.base_url', 'https://api.sstats.net'), '/');
-            $key = config('services.sstats.key');
-            $headers = $key ? ['X-API-KEY' => $key] : [];
-            if (!$key) {
-                return redirect()->route('home')->with('status', 'SSTATS_API_KEY отсутствует');
-            }
-
-            // EPL by default
-            $leagueId = 39; $year = (int) date('Y');
-            $resp = Http::withHeaders($headers)->timeout(30)->get($base.'/Games/list', [
-                'leagueid' => $leagueId,
-                'year' => $year,
-                'limit' => 500,
-                'ended' => true,
-            ]);
-            if ($resp->failed()) {
-                return redirect()->route('home')->with('status', 'Не удалось получить результаты из sstats');
-            }
-            $eventsApi = collect($resp->json('data') ?? []);
-
-            $updated = 0;
-            foreach ($eventsApi as $apiEv) {
-                $extId = data_get($apiEv, 'id') ?? data_get($apiEv, 'game.id') ?? data_get($apiEv, 'GameId') ?? data_get($apiEv, 'gameid') ?? null;
-                $homeName = data_get($apiEv, 'homeTeam.name');
-                $awayName = data_get($apiEv, 'awayTeam.name');
-                $homeScore = is_numeric($apiEv['homeResult'] ?? null) ? (int)$apiEv['homeResult'] : null;
-                $awayScore = is_numeric($apiEv['awayResult'] ?? null) ? (int)$apiEv['awayResult'] : null;
-                $ts = $apiEv['date'] ?? null;
-                $apiTime = $ts ? Carbon::parse($ts) : null;
-
-                // Требуем валидные данные и только прошедшие матчи
-                if (!$extId || !$homeName || !$awayName || $homeScore === null || $awayScore === null || !$apiTime || $apiTime->isFuture()) continue;
-
-                // Ищем событие по external_id
-                $ev = Event::query()->where('external_id', (string)$extId)->first();
-
-                // Если локального события нет — создадим его как завершённое с результатом
-                if (!$ev) {
-                    $result = 'draw';
-                    if ($homeScore > $awayScore) $result = 'home';
-                    elseif ($awayScore > $homeScore) $result = 'away';
-
-                    Event::create([
-                        'external_id' => (string)$extId,
-                        'title' => trim((string)$homeName.' vs '.(string)$awayName),
-                        'home_team' => (string)$homeName,
-                        'away_team' => (string)$awayName,
-                        'status' => 'finished',
-                        'result' => $result,
-                        'starts_at' => $apiTime,
-                        'ends_at' => $apiTime,
-                        'home_odds' => null,
-                        'draw_odds' => null,
-                        'away_odds' => null,
-                    ]);
-                    $updated++;
-                    continue;
-                }
-
-                // Определяем результат
-                $result = 'draw';
-                if ($homeScore > $awayScore) $result = 'home';
-                elseif ($awayScore > $homeScore) $result = 'away';
-
-                // Обновляем событие
-                if ($ev->status !== 'finished' || $ev->result !== $result) {
-                    $ev->status = 'finished';
-                    $ev->result = $result;
-                    $ev->ends_at = $apiTime ?: now();
-                    $ev->save();
-
-                    // Рассчитываем ставки
-                    $ev->bets()->each(function(Bet $bet) use ($ev) {
-                        $win = $bet->selection === $ev->result;
-                        $odds = match ($bet->selection) {
-                            'home' => $ev->home_odds,
-                            'draw' => $ev->draw_odds,
-                            'away' => $ev->away_odds,
-                        };
-                        $bet->is_win = $win;
-                        $bet->payout_demo = $win ? ($bet->amount_demo * ($odds ?? 2)) : 0;
-                        $bet->settled_at = now();
-                        $bet->save();
-                    });
-                    $updated++;
-                }
-            }
-
-            return redirect()->route('home')->with('status', "Синхронизировано результатов: {$updated}");
-        } catch (\Throwable $e) {
-            return redirect()->route('home')->with('status', 'Ошибка API: '.$e->getMessage());
-        }
-    }
-    
     public function autoSettleDue(Request $request)
     {
         $base = rtrim(config('services.sstats.base_url', 'https://api.sstats.net'), '/');
         $key = config('services.sstats.key');
         $headers = $key ? ['X-API-KEY' => $key] : [];
-        $dueEvents = Event::query()
-            ->where('status', '=', 'finished')
-            ->limit(10)
-            ->get();
-            Debugbar::addMessage($dueEvents->toArray(), 'dueEvents');
-        foreach ($dueEvents as $ev) {
-            $extId = (string) ($ev->external_id ?? '');
-            $resp = $extId ? Http::withHeaders($headers)->timeout(20)->get($base.'/Games/list', ['id' => $extId]) : null;
+        try { Cache::increment('cron:auto_settle_count'); } catch (\Throwable $e) {}
+        try { Cache::put('cron:last_auto_settle', Carbon::now()->toDateTimeString(), 3600); } catch (\Throwable $e) {}
+        // Берём external_id запланированных событий за сегодня + 6 часов
+        $scheduledExternalIds = $this->checkResultSchedule();
+        Debugbar::addMessage($scheduledExternalIds, 'scheduledExternalIds');
+        foreach ($scheduledExternalIds as $extId) {
+            $extId = (string) $extId;
+            if ($extId === '') { continue; }
+            $resp = Http::withHeaders($headers)->timeout(20)->get($base.'/Games/list', ['id' => $extId]);
             $payload = $resp && !$resp->failed() ? ($resp->json('data.0') ?? $resp->json('data') ?? []) : [];
             $homeScore = is_numeric(data_get($payload, 'homeResult')) ? (int) data_get($payload, 'homeResult') : null;
             $awayScore = is_numeric(data_get($payload, 'awayResult')) ? (int) data_get($payload, 'awayResult') : null;
@@ -443,6 +346,8 @@ class BetController extends Controller
                 $awaySt2 = max(0, $awayScore - $awaySt1);
             }
             if ($homeScore === null || $awayScore === null) { $homeScore = 0; $awayScore = 0; }
+            $ev = Event::where('external_id', $extId)->first();
+            if (!$ev) { continue; }
             $ev->home_result = $homeScore; $ev->away_result = $awayScore;
             $ev->home_ht_result = $homeSt1; $ev->away_ht_result = $awaySt1;
             $ev->home_st2_result = $homeSt2; $ev->away_st2_result = $awaySt2;
@@ -608,51 +513,44 @@ class BetController extends Controller
         return redirect()->route('home')->with('status', 'Авторасчёт завершён');
     }
 
-    public function processDueScheduled100()
+    public function checkResultSchedule()
     {
-        $base = rtrim(config('services.sstats.base_url', 'https://api.sstats.net'), '/');
-        $key = config('services.sstats.key');
-        $headers = $key ? ['X-API-KEY' => $key] : [];
-        $now = Carbon::now()->subMinutes(100);
+        $tz = config('app.timezone');
+        $start = Carbon::now($tz)->startOfDay();
+        $end = Carbon::now($tz)->endOfDay()->addHours(6);
+
         $events = Event::query()
             ->where('status', 'scheduled')
             ->whereNotNull('starts_at')
-            ->where('starts_at', '<=', $now)
-            ->limit(20)
+            ->whereBetween('starts_at', [$start, $end])
+            ->orderBy('starts_at')
             ->get();
-        Debugbar::addMessage($events->toArray(), 'events');
-        foreach ($events as $ev) {
-            $extId = (string) ($ev->external_id ?? '');
-            if (!$extId) { continue; }
-            $resp = Http::withHeaders($headers)->timeout(20)->get($base.'/Games/list', ['id' => $extId]);
-            if ($resp->failed()) { continue; }
-            $payload = $resp->json('data.0') ?? $resp->json('data') ?? [];
-            $homeScore = is_numeric(data_get($payload, 'homeResult')) ? (int) data_get($payload, 'homeResult') : null;
-            $awayScore = is_numeric(data_get($payload, 'awayResult')) ? (int) data_get($payload, 'awayResult') : null;
-            $homeSt1 = is_numeric(data_get($payload, 'homeHTResult')) ? (int) data_get($payload, 'homeHTResult') : (is_numeric(data_get($payload, 'homeResultSt1')) ? (int) data_get($payload, 'homeResultSt1') : null);
-            $awaySt1 = is_numeric(data_get($payload, 'awayHTResult')) ? (int) data_get($payload, 'awayHTResult') : (is_numeric(data_get($payload, 'awayResultSt1')) ? (int) data_get($payload, 'awayResultSt1') : null);
-            $homeSt2 = is_numeric(data_get($payload, 'homeResultSt2')) ? (int) data_get($payload, 'homeResultSt2') : null;
-            $awaySt2 = is_numeric(data_get($payload, 'awayResultSt2')) ? (int) data_get($payload, 'awayResultSt2') : null;
-            if ($homeSt2 === null && $awaySt2 === null && $homeScore !== null && $awayScore !== null && $homeSt1 !== null && $awaySt1 !== null) {
-                $homeSt2 = max(0, $homeScore - $homeSt1);
-                $awaySt2 = max(0, $awayScore - $awaySt1);
-            }
-            if ($homeScore === null || $awayScore === null) { continue; }
-            $ev->home_result = $homeScore;
-            $ev->away_result = $awayScore;
-            $ev->home_ht_result = $homeSt1;
-            $ev->away_ht_result = $awaySt1;
-            $ev->home_st2_result = $homeSt2;
-            $ev->away_st2_result = $awaySt2;
-            $ev->result = $homeScore === $awayScore ? 'draw' : ($homeScore > $awayScore ? 'home' : 'away');
-            $ev->result_text = 'HT(' . ($homeSt1 ?? 0) . ':' . ($awaySt1 ?? 0) . ') 2T(' . ($homeSt2 ?? 0) . ':' . ($awaySt2 ?? 0) . ') FT ' . ($homeScore ?? 0) . ':' . ($awayScore ?? 0);
-            $ev->status = 'finished';
-            $ev->ends_at = Carbon::now();
-            $ev->save();
-        }
-        // return redirect()->route('home')->with('status', 'Обработка завершена');
+
+        $externalIds = $events->pluck('external_id')->filter()->values()->all();
+
+        return $externalIds;
     }
 
+    public function cronStatus(Request $request)
+    {
+        $now = Carbon::now()->toDateTimeString();
+        $lastAuto = Cache::get('cron:last_auto_settle');
+        $lastEvents = Cache::get('cron:last_events_process');
+        $cntAuto = (int) Cache::get('cron:auto_settle_count', 0);
+        $cntEvents = (int) Cache::get('cron:events_process_count', 0);
+        return response()->json([
+            'status' => 'ok',
+            'now' => $now,
+            'last_auto_settle' => $lastAuto,
+            'last_events_process' => $lastEvents,
+            'auto_settle_count' => $cntAuto,
+            'events_process_count' => $cntEvents,
+        ]);
+    }
+    
+    
+// Непроверенные ставки. Возможно лучше брать по ним. Иначе зачем нам все проверять. Надо проверять только то что поставили - это логично. 
+// Функцию пока не удалять. 
     public function settleUnsettledBets(Request $request)
     {
         $base = rtrim(config('services.sstats.base_url', 'https://api.sstats.net'), '/');

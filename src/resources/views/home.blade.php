@@ -22,7 +22,11 @@
                     <div class="px-8 mb-4">
                         <a href="{{ route('bets.settle_unsettled') }}" class="btn btn-primary js-settle-unsettled">Рассчитать нерассчитанные ставки js-settle-unsettled</a>
                         <a href="{{ route('bets.autoSettleDue') }}" class="btn btn-primary js-autoSettleDue"> js-autoSettleDue</a>
+                        <a href="{{ route('bets.check_schedule') }}" class="btn btn-primary js-check-schedule">Показать расписание</a>
+                        
                     </div>
+                    <div id="schedule" class="px-8 mb-4"></div>
+                    <div id="cron-status" class="px-8 mb-4 text-sm text-gray-600"></div>
                 @endif
             </div>
             <div id="mainrow" class="grid grid-cols-1 md:grid-cols-[7fr_3fr] gap-4">
@@ -175,6 +179,25 @@
             setInterval(refreshOdds, 60000); // refresh every 60s
         }
 
+        const cronBox = document.getElementById('cron-status');
+        async function refreshCronStatus() {
+            if (!cronBox) return;
+            try {
+                const resp = await fetch('{{ route('cron.status') }}', { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } });
+                if (!resp.ok) return;
+                const data = await resp.json();
+                const lastAuto = data && data.last_auto_settle ? String(data.last_auto_settle) : '—';
+                const lastEvents = data && data.last_events_process ? String(data.last_events_process) : '—';
+                const cntAuto = data && typeof data.auto_settle_count !== 'undefined' ? Number(data.auto_settle_count) : 0;
+                const cntEvents = data && typeof data.events_process_count !== 'undefined' ? Number(data.events_process_count) : 0;
+                cronBox.innerHTML = 'Cron: auto_settle last=' + lastAuto + ' (' + cntAuto + ') • events_process last=' + lastEvents + ' (' + cntEvents + ')';
+            } catch (e) {}
+        }
+        if (cronBox) {
+            refreshCronStatus();
+            setInterval(refreshCronStatus, 10000); // refresh every 10s
+        }
+
         document.querySelectorAll('.collapsible .collapse-toggle').forEach(function(btn) {
             btn.addEventListener('click', function() {
                 const wrap = btn.closest('.collapsible');
@@ -218,6 +241,29 @@
                         alert('Авторасчёт выполнен');
                     } else {
                         alert('Ошибка авторасчёта');
+                    }
+                } catch (err) {
+                    alert('Сетевой сбой');
+                }
+                return;
+            }
+            const schedBtn = e.target.closest('.js-check-schedule');
+            if (schedBtn) {
+                e.preventDefault();
+                try {
+                    const resp = await fetch(schedBtn.getAttribute('href'), { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } });
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        const box = document.getElementById('schedule');
+                        if (box) {
+                            const ids = Array.isArray(data && data.finished_ids) ? data.finished_ids : [];
+                            const dateFrom = data && data.date_from ? String(data.date_from) : '';
+                            const dateTo = data && data.date_to ? String(data.date_to) : '';
+                            const list = ids.map(function(id){ return '<li>Event #' + String(id) + '</li>'; }).join('');
+                            box.innerHTML = '<div class="font-semibold">Завершённые события (' + dateFrom + ' — ' + dateTo + '):</div><ul>' + list + '</ul>';
+                        }
+                    } else {
+                        alert('Ошибка получения расписания');
                     }
                 } catch (err) {
                     alert('Сетевой сбой');

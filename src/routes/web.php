@@ -31,6 +31,9 @@ Route::get('/events/settle-test/{externalId}', [BetController::class, 'settleByT
 Route::get('/events/process-due', [BetController::class, 'processDueScheduled100'])->name('events.process_due');
 Route::get('/bets/settle-unsettled', [BetController::class, 'settleUnsettledBets'])->name('bets.settle_unsettled');
 Route::get('/bets/auto-settle-due', [BetController::class, 'autoSettleDue'])->name('bets.autoSettleDue');
+Route::get('/bets/check-result-schedule', [BetController::class, 'checkResultSchedule'])->name('bets.check_schedule');
+Route::get('/events/process-scheduled-half-hour', [BetController::class, 'processDueScheduledHalfHour'])->name('events.process_due_30m');
+Route::get('/cron/status', [BetController::class, 'cronStatus'])->name('cron.status');
 // Page removed per request
 
 // Statistics page (public access)

@@ -11,80 +11,12 @@ use Carbon\Carbon;
 
 class RebuildEvents extends Command
 {
-    protected $signature = 'events:rebuild {--hard : Truncate events and repopulate from API (dangerous)}';
-    protected $description = 'Deduplicate Events preserving bets and refresh upcoming events from API. Use --hard to truncate and repopulate.';
+    protected $signature = 'events:rebuild';
+    protected $description = 'Preserving bets and refresh upcoming events from API. ';
 
     public function handle(): int
     {
-        $hard = (bool) $this->option('hard');
-        if ($hard) {
-            $this->warn('Hard rebuild: truncating events may break foreign keys. Proceeding...');
-            try {
-                DB::statement('SET FOREIGN_KEY_CHECKS=0');
-            } catch (\Throwable $e) {}
-            try {
-                DB::table('events')->truncate();
-            } catch (\Throwable $e) {
-                $this->error('Failed to truncate events: '.$e->getMessage());
-                // Fallback to soft dedupe
-            }
-            try {
-                DB::statement('SET FOREIGN_KEY_CHECKS=1');
-            } catch (\Throwable $e) {}
-        } else {
-            $this->info('Starting deduplication preserving bets...');
-            $removed = 0;
-            DB::transaction(function () use (&$removed) {
-                // 1) Dedupe by external_id
-                $dupeExtIds = Event::query()
-                    ->whereNotNull('external_id')
-                    ->select('external_id')
-                    ->groupBy('external_id')
-                    ->havingRaw('COUNT(*) > 1')
-                    ->pluck('external_id');
-                foreach ($dupeExtIds as $extId) {
-                    $rows = Event::where('external_id', $extId)
-                        ->orderByDesc('starts_at')
-                        ->orderByDesc('id')
-                        ->get();
-                    $keep = $rows->first();
-                    $deleteIds = $rows->skip(1)->pluck('id')->all();
-                    if (!empty($deleteIds)) {
-                        Bet::whereIn('event_id', $deleteIds)->update(['event_id' => $keep->id]);
-                        Event::whereIn('id', $deleteIds)->delete();
-                        $removed += count($deleteIds);
-                    }
-                }
-
-                // 2) Dedupe null external_id by raw names + start time (UTC minute)
-                $rows = Event::whereNull('external_id')->get();
-                $groups = [];
-                foreach ($rows as $ev) {
-                    $home = strtolower(trim((string) $ev->home_team));
-                    $away = strtolower(trim((string) $ev->away_team));
-                    $dt = $ev->starts_at instanceof \Illuminate\Support\Carbon ? $ev->starts_at : ($ev->starts_at ? Carbon::parse($ev->starts_at) : null);
-                    $key = $home.'|'.$away.'|'.($dt ? $dt->copy()->utc()->format('Y-m-d H:i') : '');
-                    $groups[$key] = $groups[$key] ?? [];
-                    $groups[$key][] = $ev;
-                }
-                foreach ($groups as $list) {
-                    if (count($list) <= 1) continue;
-                    $sorted = collect($list)->sortByDesc(function ($e) {
-                        return (($e->starts_at instanceof \Illuminate\Support\Carbon) ? $e->starts_at->getTimestamp() : (string)$e->starts_at).'|'.$e->id;
-                    });
-                    $keep = $sorted->first();
-                    $deleteIds = $sorted->skip(1)->pluck('id')->all();
-                    if (!empty($deleteIds)) {
-                        Bet::whereIn('event_id', $deleteIds)->update(['event_id' => $keep->id]);
-                        Event::whereIn('id', $deleteIds)->delete();
-                        $removed += count($deleteIds);
-                    }
-                }
-            });
-            $this->info("Removed duplicates: {$removed}");
-        }
-
-        // Refresh upcoming events via API (EPL, UCL, ITA и т.д.)
+        // Обновляем события через API (EPL, UCL, ITA и т.д.) они же ставки на главной.
         $base = rtrim(config('services.sstats.base_url', 'https://api.sstats.net'), '/');
         $apiKey = config('services.sstats.key');
         // Генерация тестовой лиги независимо от наличия API‑ключа
