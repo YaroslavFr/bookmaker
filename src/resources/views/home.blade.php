@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Sport FreeBets</title>
     <link rel="stylesheet" href="{{ asset('css/bets.css') }}">
-    @if (file_exists(public_path('build/manifest.json')))
+    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     @else
         <link rel="stylesheet" href="{{ asset('css/app.css') }}">
@@ -46,12 +46,14 @@
                 </div>
             
             @if(auth()->check())
-            <div class="card mt-20 ">
+            <div id="coupon-user-block" class="card mt-20 sticky top-4 self-start z-20">
+                <div class="coupon-scroll max-h-[80vh] overflow-auto">
                 <div id="vue-app"
                      data-csrf="{{ csrf_token() }}"
                      data-post-url="{{ route('bets.store') }}"
                      data-is-auth="{{ auth()->check() ? '1' : '0' }}"
                      data-username="{{ auth()->check() ? (auth()->user()->username ?? '') : '' }}">
+                </div>
                 </div>
             </div>
             @endif
@@ -416,6 +418,8 @@
         });
     });
     </script>
+
+    
 
         </div>
     </main>

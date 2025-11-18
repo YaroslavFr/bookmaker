@@ -54,6 +54,24 @@ class BetController extends Controller
                 ->filter()
                 ->values();
 
+            // Детерминированный порядок лиг по конфигу leagues.default_ids
+            try {
+                $defIds = (array) config('leagues.default_ids', []);
+                $byIdPos = [];
+                foreach ($defIds as $pos => $lid) { $byIdPos[(int)$lid] = (int)$pos; }
+                $leaguesConf = (array) config('leagues.leagues', []);
+                $getPos = function ($code) use ($leaguesConf, $byIdPos) {
+                    $code = (string) $code;
+                    $info = $leaguesConf[$code] ?? null;
+                    $lid = $info['id'] ?? null;
+                    $pos = $lid !== null && isset($byIdPos[(int)$lid]) ? (int)$byIdPos[(int)$lid] : 999999;
+                    return $pos;
+                };
+                $competitions = $competitions->sortBy(function($code){ return (string)$code; })
+                    ->sortBy(function($code) use ($getPos){ return $getPos($code); })
+                    ->values();
+            } catch (\Throwable $e) { /* keep natural order */ }
+
             $eventsByCompetition = [];
             foreach ($competitions as $comp) {
                 $collection = Event::with('bets')
