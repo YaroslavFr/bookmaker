@@ -1,0 +1,42 @@
+{
+  "status": "OK",
+  "count": 3,
+  "data": [
+    {
+      "id": 111111111111111111111111111111111,
+      "date": "2025-11-18T19:45:00+00:00",
+      "status": 8,
+      "statusName": "Finished",
+      "homeResult": 0,
+      "awayResult": 1,
+      "homeHTResult": 0,
+      "awayHTResult": 0,
+      "homeFTResult": 0,
+      "awayFTResult": 1
+    },
+    {
+      "id": 222222222222222222222222,
+      "date": "2025-11-18T21:00:00+00:00",
+      "status": 8,
+      "statusName": "Finished",
+      "homeResult": 2,
+      "awayResult": 2,
+      "homeHTResult": 1,
+      "awayHTResult": 2,
+      "homeFTResult": 2,
+      "awayFTResult": 2
+    },
+    {
+      "id": 2525252525252525252525252525252525,
+      "date": "2025-11-18T22:30:00+00:00",
+      "status": 8,
+      "statusName": "Finished",
+      "homeResult": 3,
+      "awayResult": 1,
+      "homeHTResult": 1,
+      "awayHTResult": 1,
+      "homeFTResult": 3,
+      "awayFTResult": 1
+    }
+  ]
+}

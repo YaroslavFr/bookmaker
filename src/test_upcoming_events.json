@@ -1,0 +1,54 @@
+{
+  "status": "OK",
+  "count": 3,
+  "data": [
+    {
+      "id": 111111111111111111111111111111111,
+      "date": "2025-11-18T19:45:00+00:00",
+      "status": 2,
+      "statusName": "Scheduled",
+      "homeTeam": { "id": 1110, "name": "Тестовая команда 1 из jsona" },
+      "awayTeam": { "id": 778,  "name": "Тестовая команда 2 из jsona" },
+      "season": { "year": 2024, "league": { "id": 32, "name": "World Cup - Qualification Europe" } },
+      "odds": [
+        { "marketId": 1, "odds": [
+          { "name": "Home", "value": 3.10 },
+          { "name": "Away", "value": 2.05 },
+          { "name": "Draw", "value": 3.40 }
+        ]}
+      ]
+    },
+    {
+      "id": 222222222222222222222222,
+      "date": "2025-11-18T21:00:00+00:00",
+      "status": 2,
+      "statusName": "Scheduled",
+      "homeTeam": { "id": 2222, "name": "Тестовая команда 3 из jsona" },
+      "awayTeam": { "id": 3333, "name": "Тестовая команда 4 из jsona" },
+      "season": { "year": 2024, "league": { "id": 32, "name": "World Cup - Qualification Europe" } },
+      "odds": [
+        { "marketId": 1, "odds": [
+          { "name": "Home", "value": 1.90 },
+          { "name": "Away", "value": 3.80 },
+          { "name": "Draw", "value": 3.50 }
+        ]}
+      ]
+    },
+    {
+      "id": 2525252525252525252525252525252525,
+      "date": "2025-11-18T22:30:00+00:00",
+      "status": 2,
+      "statusName": "Scheduled",
+      "homeTeam": { "id": 4444, "name": "Тестовая команда 5 из jsona" },
+      "awayTeam": { "id": 5555, "name": "Тестовая команда 6 из jsona" },
+      "season": { "year": 2024, "league": { "id": 32, "name": "World Cup - Qualification Europe" } },
+      "odds": [
+        { "marketId": 1, "odds": [
+          { "name": "Home", "value": 2.40 },
+          { "name": "Away", "value": 2.80 },
+          { "name": "Draw", "value": 3.20 }
+        ]}
+      ]
+    }
+  ]
+}

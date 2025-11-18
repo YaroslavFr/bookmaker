@@ -162,6 +162,165 @@
       ]
     },
     {
+      "id": 222222222222222222222222,
+      "flashId": null,
+      "date": "2025-11-18T19:45:00+00:00",
+      "dateUtc": 1763063100,
+      "status": 8,
+      "periods": [
+        "2025-11-18T19:45:00+00:00",
+        "2025-11-18T20:45:00+00:00"
+      ],
+      "statusName": "Finished",
+      "elapsed": 90,
+      "extraMinutes": 4,
+      "homeResult": 0,
+      "awayResult": 1,
+      "homeHTResult": 0,
+      "awayHTResult": 0,
+      "homeFTResult": 0,
+      "awayFTResult": 1,
+      "homeTeam": {
+        "id": 222222222222222,
+        "name": "Тестовая команда 2",
+        "flashId": "andorra/dnO5z404",
+        "country": {
+          "code": "AD",
+          "name": "Andorra"
+        }
+      },
+      "awayTeam": {
+        "id": 33333333333333333,
+        "name": "Тестовая команда 3",
+        "flashId": "albania/ELP2K4oB",
+        "country": {
+          "code": "AL",
+          "name": "Тестовая команда 17"
+        }
+      },
+      "season": {
+        "uid": "3af4fb50-bfac-11ef-b475-cb5b1c112323",
+        "year": 2024,
+        "league": {
+          "id": 32,
+          "name": "World Cup - Qualification Europe",
+          "country": {
+            "code": "WW",
+            "name": "World"
+          }
+        }
+      },
+      "roundName": "Group Stage - 9",
+      "odds": [
+        {
+          "marketId": 1,
+          "marketName": null,
+          "odds": [
+            {
+              "name": "Home",
+              "value": 18.18,
+              "openingValue": null
+            },
+            {
+              "name": "Away",
+              "value": 1.23,
+              "openingValue": null
+            },
+            {
+              "name": "Draw",
+              "value": 5.67,
+              "openingValue": null
+            }
+          ]
+        },
+        {
+          "marketId": 2,
+          "marketName": null,
+          "odds": [
+            {
+              "name": "Home",
+              "value": 14.79,
+              "openingValue": null
+            },
+            {
+              "name": "Away",
+              "value": 1.04,
+              "openingValue": null
+            }
+          ]
+        },
+        {
+          "marketId": 12,
+          "marketName": null,
+          "odds": [
+            {
+              "name": "Home/Draw",
+              "value": 4.4,
+              "openingValue": null
+            },
+            {
+              "name": "Home/Away",
+              "value": 1.17,
+              "openingValue": null
+            },
+            {
+              "name": "Draw/Away",
+              "value": 1.04,
+              "openingValue": null
+            }
+          ]
+        },
+        {
+          "marketId": 5,
+          "marketName": null,
+          "odds": [
+            {
+              "name": "Over 2.5",
+              "value": 2.22,
+              "openingValue": null
+            },
+            {
+              "name": "Under 2.5",
+              "value": 1.7,
+              "openingValue": null
+            }
+          ]
+        },
+        {
+          "marketId": 16,
+          "marketName": null,
+          "odds": [
+            {
+              "name": "Over 0.5",
+              "value": 3.14,
+              "openingValue": null
+            },
+            {
+              "name": "Under 0.5",
+              "value": 1.37,
+              "openingValue": null
+            }
+          ]
+        },
+        {
+          "marketId": 17,
+          "marketName": null,
+          "odds": [
+            {
+              "name": "Over 1.5",
+              "value": 1.56,
+              "openingValue": null
+            },
+            {
+              "name": "Under 1.5",
+              "value": 2.47,
+              "openingValue": null
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": 2525252525252525252525252525252525,
       "flashId": null,
       "date": "2025-11-13T19:45:00+00:00",

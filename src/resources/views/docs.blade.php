@@ -136,6 +136,9 @@
 
         Если через докер - 
         docker compose exec app php artisan events:rebuild
+        
+        Создание с тестовыми если через докер - 
+        docker compose exec app php artisan events:rebuild --json=upcoming
 
         # Опционально: жёсткий ребилд с очисткой таблицы (опасно)
         php artisan events:rebuild --hard
