@@ -12,7 +12,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
-use Barryvdh\Debugbar\Facades\Debugbar;
 
 class BetController extends Controller
 {
@@ -329,7 +328,9 @@ class BetController extends Controller
         try { Cache::put('cron:last_auto_settle', Carbon::now()->toDateTimeString(), 3600); } catch (\Throwable $e) {}
         // Берём external_id запланированных событий за сегодня + 6 часов
         $scheduledExternalIds = $this->checkResultSchedule();
-        Debugbar::addMessage($scheduledExternalIds, 'scheduledExternalIds');
+        if (class_exists(\Barryvdh\Debugbar\Facades\Debugbar::class)) {
+            \Barryvdh\Debugbar\Facades\Debugbar::addMessage($scheduledExternalIds, 'scheduledExternalIds');
+        }
         foreach ($scheduledExternalIds as $extId) {
             $extId = (string) $extId;
             if ($extId === '') { continue; }

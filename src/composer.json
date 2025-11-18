@@ -68,6 +68,13 @@
         "pre-package-uninstall": [
             "Illuminate\\Foundation\\ComposerScripts::prePackageUninstall"
         ]
+        ,
+        "deploy-env": [
+            "@php -r \"copy('.env.production', '.env');\"",
+            "@php artisan config:clear",
+            "@php artisan cache:clear",
+            "@php artisan config:cache"
+        ]
     },
     "extra": {
         "laravel": {

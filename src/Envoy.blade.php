@@ -178,7 +178,27 @@
     echo "Admin update completed (no .env changes)"
 @endtask
 
+@task('env-apply', ['on' => 'beget'])
+    cd {{ $path }}
+
+    set -e
+
+    echo "--- Applying production env (.env.production -> .env) ---"
+    if [ -f "src/.env.production" ]; then
+        cp -f src/.env.production src/.env
+    else
+        echo "src/.env.production not found" && exit 1
+    fi
+
+    {{ $php }} src/artisan config:clear
+    {{ $php }} src/artisan cache:clear
+    {{ $php }} src/artisan config:cache
+
+    echo "Env applied and caches rebuilt"
+@endtask
+
 @story('release')
+    env-apply
     deploy
     assets-build
 @endstory

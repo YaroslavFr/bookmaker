@@ -1,6 +1,11 @@
 <?php
 
-return [
+$providers = [
     App\Providers\AppServiceProvider::class,
-    Barryvdh\Debugbar\ServiceProvider::class,
 ];
+
+if (class_exists(Barryvdh\Debugbar\ServiceProvider::class)) {
+    $providers[] = Barryvdh\Debugbar\ServiceProvider::class;
+}
+
+return $providers;
