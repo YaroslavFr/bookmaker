@@ -344,54 +344,63 @@ class BetController extends Controller
         $base = rtrim(config('services.sstats.base_url', 'https://api.sstats.net'), '/');
         $key = config('services.sstats.key');
         $headers = $key ? ['X-API-KEY' => $key] : [];
-        try { Cache::increment('cron:auto_settle_count'); } catch (\Throwable $e) {}
-        try { Cache::put('cron:last_auto_settle', Carbon::now()->toDateTimeString(), 3600); } catch (\Throwable $e) {}
-        // Берём external_id запланированных событий за сегодня + 6 часов
+        $statusEnd = 8; // Законченные матчи.
+        // Берём external_id запланированных событий за прошедшие даты чтобы проставить результаты и статус finished
         $scheduledExternalIds = $this->checkResultSchedule();
         
         foreach ($scheduledExternalIds as $extId) {
             $extId = (string) $extId;
             if ($extId === '') { continue; }
-            $resp = Http::withHeaders($headers)->timeout(20)->get($base.'/Games/list', ['id' => $extId]);
-            
-            if (class_exists(\Barryvdh\Debugbar\Facades\Debugbar::class)) {
-                \Barryvdh\Debugbar\Facades\Debugbar::addMessage($extId, 'extId');
+            // Обращаемся к апи , чтобы взять по ИД матч.
+            $payload = [];
+            foreach ([2025, 2024] as $yr) {
+                $resp = Http::withHeaders($headers)->timeout(20)->get($base.'/Games/list', ['id' => $extId, 'status' => $statusEnd, 'Year' => $yr]);
+                $payload = $resp && !$resp->failed() ? ($resp->json('data.0') ?? $resp->json('data') ?? []) : [];
+                if (!empty($payload)) { break; }
             }
-            
-            $payload = $resp && !$resp->failed() ? ($resp->json('data.0') ?? $resp->json('data') ?? []) : [];
+            // Проставляем результаты за тайм и матч
             $homeScore = is_numeric(data_get($payload, 'homeResult')) ? (int) data_get($payload, 'homeResult') : null;
             $awayScore = is_numeric(data_get($payload, 'awayResult')) ? (int) data_get($payload, 'awayResult') : null;
-            $homeSt1 = is_numeric(data_get($payload, 'homeResultSt1')) ? (int) data_get($payload, 'homeResultSt1') : null;
-            $awaySt1 = is_numeric(data_get($payload, 'awayResultSt1')) ? (int) data_get($payload, 'awayResultSt1') : null;
-            $homeSt2 = is_numeric(data_get($payload, 'homeResultSt2')) ? (int) data_get($payload, 'homeResultSt2') : null;
-            $awaySt2 = is_numeric(data_get($payload, 'awayResultSt2')) ? (int) data_get($payload, 'awayResultSt2') : null;
+            $homeSt1 = is_numeric(data_get($payload, 'homeHTResult')) ? (int) data_get($payload, 'homeHTResult') : null;
+            $awaySt1 = is_numeric(data_get($payload, 'awayHTResult')) ? (int) data_get($payload, 'awayHTResult') : null;
+            $homeSt2 = is_numeric(data_get($payload, 'homeFTResult')) ? (int) data_get($payload, 'homeFTResult') : null;
+            $awaySt2 = is_numeric(data_get($payload, 'awayFTResult')) ? (int) data_get($payload, 'awayFTResult') : null;
             if ($homeSt2 === null && $awaySt2 === null && $homeScore !== null && $awayScore !== null && $homeSt1 !== null && $awaySt1 !== null) {
                 $homeSt2 = max(0, $homeScore - $homeSt1);
                 $awaySt2 = max(0, $awayScore - $awaySt1);
             }
             if ($homeScore === null || $awayScore === null) { $homeScore = 0; $awayScore = 0; }
             $ev = Event::where('external_id', $extId)->first();
-            return;
+            
+            $teamHome = data_get($payload, 'homeTeam.name') ?? data_get($payload, 'home') ?? ($ev->home_team ?? null);
+            $teamAway = data_get($payload, 'awayTeam.name') ?? data_get($payload, 'away') ?? ($ev->away_team ?? null);
+            
             if (!$ev) { continue; }
             $ev->home_result = $homeScore; $ev->away_result = $awayScore;
             $ev->home_ht_result = $homeSt1; $ev->away_ht_result = $awaySt1;
             $ev->home_st2_result = $homeSt2; $ev->away_st2_result = $awaySt2;
             $ev->result = $homeScore === $awayScore ? 'draw' : ($homeScore > $awayScore ? 'home' : 'away');
             $ev->result_text = 'HT(' . ($homeSt1 ?? 0) . ':' . ($awaySt1 ?? 0) . ') 2T(' . ($homeSt2 ?? 0) . ':' . ($awaySt2 ?? 0) . ') FT ' . ($homeScore ?? 0) . ':' . ($awayScore ?? 0);
+            if ($ev->status !== 'finished') { $ev->status = 'finished'; $ev->ends_at = Carbon::now(); }
             $ev->save();
             $ev->bets()->whereNull('settled_at')->each(function (Bet $bet) use ($homeScore, $awayScore, $homeSt1, $awaySt1, $homeSt2, $awaySt2, $ev) {
                 $market = trim((string) ($bet->market ?? ''));
                 $selection = trim(strtolower((string) $bet->selection));
+                $sel = $selection;
+                if (in_array($sel, ['1','п1','p1'], true)) { $sel = 'home'; }
+                elseif (in_array($sel, ['2','п2','p2'], true)) { $sel = 'away'; }
+                elseif (in_array($sel, ['x','ничья'], true)) { $sel = 'draw'; }
                 $amount = (float) ($bet->amount_demo ?? 0);
                 $odds = (float) ($bet->placed_odds ?? 0);
                 $win = false; $payout = 0.0; $settled = false;
-                if ($market === '' || in_array($selection, ['home','draw','away'], true)) {
-                    $win = ($selection === 'home' && $homeScore > $awayScore) || ($selection === 'away' && $awayScore > $homeScore) || ($selection === 'draw' && $homeScore === $awayScore);
+                if ($market === '' || in_array($sel, ['home','draw','away'], true)) {
+                    $win = ($sel === 'home' && $homeScore > $awayScore) || ($sel === 'away' && $awayScore > $homeScore) || ($sel === 'draw' && $homeScore === $awayScore);
                     $settled = true;
                 } elseif (stripos($market, '2 тайм') !== false) {
                     if ($homeSt2 !== null && $awaySt2 !== null) {
-                        $win = ($selection === 'home' && $homeSt2 > $awaySt2) || ($selection === 'away' && $awaySt2 > $homeSt2) || ($selection === 'draw' && $homeSt2 === $awaySt2);
+                        $win = ($sel === 'home' && $homeSt2 > $awaySt2) || ($sel === 'away' && $awaySt2 > $homeSt2) || ($sel === 'draw' && $homeSt2 === $awaySt2);
                         $settled = true;
+                        
                     }
                 } elseif (stripos($market, 'тоталы 1 тайм') !== false) {
                     if ($homeSt1 !== null && $awaySt1 !== null) {
@@ -467,21 +476,34 @@ class BetController extends Controller
                             }
                         }
                     }
-                } elseif (stripos($market, 'обе забьют') !== false) {
-                    $yes = strpos($bet->selection, 'Yes') !== false || strpos($bet->selection, 'Да') !== false;
-                    $no = strpos($bet->selection, 'No') !== false || strpos($bet->selection, 'Нет') !== false;
+                } elseif (mb_stripos($market, 'обе забьют', 0, 'UTF-8') !== false) {
+                    $selRaw = (string) $bet->selection;
+                    $yes = (stripos($selRaw, 'yes') !== false) || (stripos($selRaw, 'да') !== false);
+                    $no = (stripos($selRaw, 'no') !== false) || (stripos($selRaw, 'нет') !== false);
                     if ($yes || $no) { $win = $yes ? ($homeScore > 0 && $awayScore > 0) : !($homeScore > 0 && $awayScore > 0); $settled = true; }
-                } elseif (preg_match('/^1\s*забьет/i', $market)) {
-                    $yes = strpos($bet->selection, 'Yes') !== false || strpos($bet->selection, 'Да') !== false;
-                    $no = strpos($bet->selection, 'No') !== false || strpos($bet->selection, 'Нет') !== false;
+                } elseif (preg_match('/^1\s*забьет/iu', $market)) {
+                    $selRaw = (string) $bet->selection;
+                    $yes = (stripos($selRaw, 'yes') !== false) || (stripos($selRaw, 'да') !== false);
+                    $no = (stripos($selRaw, 'no') !== false) || (stripos($selRaw, 'нет') !== false);
                     if ($yes || $no) { $win = $yes ? ($homeScore > 0) : ($homeScore === 0); $settled = true; }
-                } elseif (preg_match('/^2\s*забьет/i', $market)) {
-                    $yes = strpos($bet->selection, 'Yes') !== false || strpos($bet->selection, 'Да') !== false;
-                    $no = strpos($bet->selection, 'No') !== false || strpos($bet->selection, 'Нет') !== false;
+                } elseif (preg_match('/^2\s*забьет/iu', $market)) {
+                    $selRaw = (string) $bet->selection;
+                    $yes = (stripos($selRaw, 'yes') !== false) || (stripos($selRaw, 'да') !== false);
+                    $no = (stripos($selRaw, 'no') !== false) || (stripos($selRaw, 'нет') !== false);
                     if ($yes || $no) { $win = $yes ? ($awayScore > 0) : ($awayScore === 0); $settled = true; }
-                } elseif (stripos($market, 'азиатский гандикап') !== false || stripos($market, 'фора') !== false) {
-                    if (preg_match('/^(home|away)\s*([+-]?\d+(?:\.\d+)?)$/i', $bet->selection, $m)) {
+                } elseif (stripos($market, 'азиатский гандикап') !== false || mb_stripos($market, 'фора', 0, 'UTF-8') !== false) {
+                    $team = null; $line = null; $selRaw = (string)$bet->selection;
+                    if (preg_match('/^(home|away)\s*\(?\s*([+-]?\d+(?:\.\d+)?)\s*\)?$/i', $selRaw, $m)) {
                         $team = strtolower($m[1]); $line = (float) $m[2];
+                    } elseif (preg_match('/^(?:фора|fora)\s*(1|2)\s*[\(\s]*([+-]?\d+(?:\.\d+)?)\)?$/iu', $selRaw, $m)) {
+                        
+                        $team = $m[1] === '1' ? 'home' : 'away'; $line = (float) $m[2];
+                    } elseif (preg_match('/^(?:asian\s*handicap|азиатский\s*гандикап)\s*(home|away|1|2)\s*([+-]?\d+(?:\.\d+)?)$/iu', $selRaw, $m)) {
+                        $team = in_array(strtolower($m[1]), ['home','away']) ? strtolower($m[1]) : ($m[1] === '1' ? 'home' : 'away'); $line = (float) $m[2];
+                    } elseif (preg_match('/^(h|a)\s*\(?([+-]?\d+(?:\.\d+)?)\)?$/i', $selRaw, $m)) {
+                        $team = strtolower($m[1]) === 'h' ? 'home' : 'away'; $line = (float) $m[2];
+                    }
+                    if ($team !== null && $line !== null) {
                         $adjHome = $homeScore + ($team === 'home' ? $line : 0);
                         $adjAway = $awayScore + ($team === 'away' ? $line : 0);
                         if (fmod($line, 0.5) === 0.25) {
@@ -541,14 +563,20 @@ class BetController extends Controller
     public function checkResultSchedule()
     {
         $tz = config('app.timezone');
-        $start = Carbon::now($tz)->startOfDay();
-        $end = Carbon::now($tz)->endOfDay()->addHours(6);
+        $now = Carbon::now($tz);
 
         $events = Event::query()
-            ->where('status', 'scheduled')
             ->whereNotNull('starts_at')
-            ->whereBetween('starts_at', [$start, $end])
+            ->whereNot('competition', 'TEST')
+            ->where('starts_at', '<=', $now)
+            ->whereIn('status', ['scheduled','live'])
+            ->whereHas('bets', function($q){
+                $q->whereHas('coupon', function($qc){
+                    $qc->whereNull('is_win')->whereNull('settled_at');
+                });
+            })
             ->orderBy('starts_at')
+            ->limit(10)
             ->get();
 
         $externalIds = $events->pluck('external_id')->filter()->values()->all();
@@ -556,24 +584,6 @@ class BetController extends Controller
         return $externalIds;
     }
 
-    public function cronStatus(Request $request)
-    {
-        $now = Carbon::now()->toDateTimeString();
-        $lastAuto = Cache::get('cron:last_auto_settle');
-        $lastEvents = Cache::get('cron:last_events_process');
-        $cntAuto = (int) Cache::get('cron:auto_settle_count', 0);
-        $cntEvents = (int) Cache::get('cron:events_process_count', 0);
-        return response()->json([
-            'status' => 'ok',
-            'now' => $now,
-            'last_auto_settle' => $lastAuto,
-            'last_events_process' => $lastEvents,
-            'auto_settle_count' => $cntAuto,
-            'events_process_count' => $cntEvents,
-        ]);
-    }
-    
-    
 // Непроверенные ставки. Возможно лучше брать по ним. Иначе зачем нам все проверять. Надо проверять только то что поставили - это логично. 
 // Функцию пока не удалять. 
     public function settleUnsettledBets(Request $request)
@@ -592,8 +602,6 @@ class BetController extends Controller
         $changed = [];
         foreach ($byEvent as $eventId => $items) {
             $ev = $items->first()->event;
-            Debugbar::addMessage($items->toArray(), 'items');
-            Debugbar::addMessage($ev->toArray(), 'ev');
             if (!$ev) { continue; }
             $homeScore = is_numeric($ev->home_result) ? (int) $ev->home_result : null;
             $awayScore = is_numeric($ev->away_result) ? (int) $ev->away_result : null;
@@ -653,16 +661,20 @@ class BetController extends Controller
             foreach ($items as $bet) {
                 $market = trim((string) ($bet->market ?? ''));
                 $selection = trim(strtolower((string) $bet->selection));
+                $sel = $selection;
+                if (in_array($sel, ['1','п1','p1'], true)) { $sel = 'home'; }
+                elseif (in_array($sel, ['2','п2','p2'], true)) { $sel = 'away'; }
+                elseif (in_array($sel, ['x','ничья'], true)) { $sel = 'draw'; }
                 $amount = (float) ($bet->amount_demo ?? 0);
                 $odds = (float) ($bet->placed_odds ?? 0);
                 $win = false; $payout = 0.0; $settled = false;
-                Debugbar::addMessage($market, 'market');
-                if ($market === '' || in_array($selection, ['home','draw','away'], true)) {
-                    $win = ($selection === 'home' && $homeScore > $awayScore) || ($selection === 'away' && $awayScore > $homeScore) || ($selection === 'draw' && $homeScore === $awayScore);
+                
+                if ($market === '' || in_array($sel, ['home','draw','away'], true)) {
+                    $win = ($sel === 'home' && $homeScore > $awayScore) || ($sel === 'away' && $awayScore > $homeScore) || ($sel === 'draw' && $homeScore === $awayScore);
                     $settled = true;
                 } elseif (stripos($market, '2 тайм') !== false) {
                     if ($homeSt2 !== null && $awaySt2 !== null) {
-                        $win = ($selection === 'home' && $homeSt2 > $awaySt2) || ($selection === 'away' && $awaySt2 > $homeSt2) || ($selection === 'draw' && $homeSt2 === $awaySt2);
+                        $win = ($sel === 'home' && $homeSt2 > $awaySt2) || ($sel === 'away' && $awaySt2 > $homeSt2) || ($sel === 'draw' && $homeSt2 === $awaySt2);
                         $settled = true;
                     }
                 } elseif (stripos($market, 'тоталы 1 тайм') !== false) {
@@ -708,7 +720,7 @@ class BetController extends Controller
                     }
                 } elseif (stripos($market, 'Тоталы') !== false) {
                     $total = $homeScore + $awayScore;
-                    Debugbar::addMessage($total, 'total');
+                    
                     if (preg_match('/^(over|under)\s*([0-9]+(?:\.[0-9]+)?)$/i', $bet->selection, $m)) {
                         $type = strtolower($m[1]); $line = (float) $m[2];
                         if (fmod($line, 0.5) === 0.25) {
@@ -731,16 +743,19 @@ class BetController extends Controller
                         }
                     }
                 } elseif (stripos($market, 'обе забьют') !== false) {
-                    $yes = strpos($bet->selection, 'Yes') !== false || strpos($bet->selection, 'Да') !== false;
-                    $no = strpos($bet->selection, 'No') !== false || strpos($bet->selection, 'Нет') !== false;
+                    $selRaw = (string) $bet->selection;
+                    $yes = stripos($selRaw, 'yes') !== false || stripos($selRaw, 'да') !== false;
+                    $no = stripos($selRaw, 'no') !== false || stripos($selRaw, 'нет') !== false;
                     if ($yes || $no) { $win = $yes ? ($homeScore > 0 && $awayScore > 0) : !($homeScore > 0 && $awayScore > 0); $settled = true; }
                 } elseif (preg_match('/^1\s*забьет/i', $market)) {
-                    $yes = strpos($bet->selection, 'Yes') !== false || strpos($bet->selection, 'Да') !== false;
-                    $no = strpos($bet->selection, 'No') !== false || strpos($bet->selection, 'Нет') !== false;
+                    $selRaw = (string) $bet->selection;
+                    $yes = stripos($selRaw, 'yes') !== false || stripos($selRaw, 'да') !== false;
+                    $no = stripos($selRaw, 'no') !== false || stripos($selRaw, 'нет') !== false;
                     if ($yes || $no) { $win = $yes ? ($homeScore > 0) : ($homeScore === 0); $settled = true; }
                 } elseif (preg_match('/^2\s*забьет/i', $market)) {
-                    $yes = strpos($bet->selection, 'Yes') !== false || strpos($bet->selection, 'Да') !== false;
-                    $no = strpos($bet->selection, 'No') !== false || strpos($bet->selection, 'Нет') !== false;
+                    $selRaw = (string) $bet->selection;
+                    $yes = stripos($selRaw, 'yes') !== false || stripos($selRaw, 'да') !== false;
+                    $no = stripos($selRaw, 'no') !== false || stripos($selRaw, 'нет') !== false;
                     if ($yes || $no) { $win = $yes ? ($awayScore > 0) : ($awayScore === 0); $settled = true; }
                 } elseif (stripos($market, 'азиатский гандикап') !== false || stripos($market, 'фора') !== false) {
                     if (preg_match('/^(home|away)\s*([+-]?\d+(?:\.\d+)?)$/i', $bet->selection, $m)) {

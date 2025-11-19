@@ -110,23 +110,19 @@
                                                 <span class="muted">(кэф.: <span class="text-orange-400 text-base">{{ number_format($placedOdds, 2) }}</span>)</span>
                                             @endif
                                             </div>
+                                            @php($hr = is_numeric($l->event->home_result ?? null) ? (int) $l->event->home_result : null)
+                                            @php($ar = is_numeric($l->event->away_result ?? null) ? (int) $l->event->away_result : null)
+                                            @if($hr !== null && $ar !== null)
+                                                <div class="muted">Счёт: {{ $hr }}:{{ $ar }}</div>
+                                            @endif
                                         </div>
                                     @endforeach
                                 </div>
                                 <div class="rt-cell" data-label="Сумма">{{ $coupon->amount_demo ? number_format($coupon->amount_demo, 2) : '—' }}</div>
                                 <div class="rt-cell" data-label="Итоговый кэф">{{ $coupon->total_odds ? number_format($coupon->total_odds, 2) : '—' }}</div>
                                 <div class="rt-cell" data-label="Потенц. выплата">{{ $potential ? number_format($potential, 2) : '—' }}</div>
-                                @php($ftScores = collect($coupon->bets ?? [])->map(function($b){
-                                    $e = $b->event ?? null;
-                                    $hr = is_numeric($e->home_result ?? null) ? (int) $e->home_result : null;
-                                    $ar = is_numeric($e->away_result ?? null) ? (int) $e->away_result : null;
-                                    return ($hr !== null && $ar !== null) ? ($hr.':'.$ar) : null;
-                                })->filter()->unique()->values())
                                 <div class="rt-cell text-xs {{ $coupon->is_win === null ? 'text-gray-500' : ($coupon->is_win ? 'text-green-500' : 'text-red-600') }}" data-label="Статус">
                                     {{ $coupon->is_win === null ? 'Не рассчитано' : ($coupon->is_win ? 'Выиграно' : 'Проигрыш') }}
-                                    @if($ftScores->count())
-                                        <div class="muted">Счёт: {{ implode(', ', $ftScores->all()) }}</div>
-                                    @endif
                                 </div>
                                 <div class="rt-cell" data-label="Дата расчета">{{ $settlementAt ? $settlementAt->format('Y-m-d H:i') : '—' }}</div>
                                 <div class="rt-cell text-xs" data-label="Дата ставки">{{ $coupon->created_at ? $coupon->created_at->format('Y-m-d H:i') : '—' }}</div>
@@ -179,25 +175,6 @@
         if (oddsBody && oddsLast) {
             refreshOdds();
             setInterval(refreshOdds, 60000); // refresh every 60s
-        }
-
-        const cronBox = document.getElementById('cron-status');
-        async function refreshCronStatus() {
-            if (!cronBox) return;
-            try {
-                const resp = await fetch('{{ route('cron.status') }}', { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } });
-                if (!resp.ok) return;
-                const data = await resp.json();
-                const lastAuto = data && data.last_auto_settle ? String(data.last_auto_settle) : '—';
-                const lastEvents = data && data.last_events_process ? String(data.last_events_process) : '—';
-                const cntAuto = data && typeof data.auto_settle_count !== 'undefined' ? Number(data.auto_settle_count) : 0;
-                const cntEvents = data && typeof data.events_process_count !== 'undefined' ? Number(data.events_process_count) : 0;
-                cronBox.innerHTML = 'Cron: auto_settle last=' + lastAuto + ' (' + cntAuto + ') • events_process last=' + lastEvents + ' (' + cntEvents + ')';
-            } catch (e) {}
-        }
-        if (cronBox) {
-            refreshCronStatus();
-            setInterval(refreshCronStatus, 10000); // refresh every 10s
         }
 
         document.querySelectorAll('.collapsible .collapse-toggle').forEach(function(btn) {

@@ -59,6 +59,7 @@
                                 data-home="{{ $ev->home_team ?? '' }}"
                                 data-away="{{ $ev->away_team ?? '' }}"
                                 data-target-id="extra-{{ $ev->id }}"
+                                data-target-external_id="{{ $ev->external_id }}"
                                 style="margin-left:8px; padding:2px 8px; border:1px solid #9ca3af; border-radius:4px; background:#fff;">+
                         </button>
                     </td>

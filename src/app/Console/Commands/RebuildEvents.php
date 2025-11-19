@@ -41,6 +41,7 @@ class RebuildEvents extends Command
         }
 
         $headers = ['X-API-KEY' => $apiKey, 'Accept' => 'application/json'];
+        $tz = config('app.timezone');
         // Карта код -> id из общего конфига
         $defLeagueIds = [];
         foreach (config('leagues.leagues') as $code => $info) {
@@ -75,7 +76,7 @@ class RebuildEvents extends Command
                             if (!is_array($games)) { $games = []; }
                         }
                     }
-                    $now = Carbon::now();
+                    $now = Carbon::now($tz);
                     foreach ($games as $g) {
                         $homeName = data_get($g, 'homeTeam.name') ?? data_get($g, 'home.name') ?? data_get($g, 'home') ?? data_get($g, 'Home');
                         $awayName = data_get($g, 'awayTeam.name') ?? data_get($g, 'away.name') ?? data_get($g, 'away') ?? data_get($g, 'Away');
@@ -88,8 +89,8 @@ class RebuildEvents extends Command
                         if (!$dt) continue;
                         $statusName = data_get($g, 'statusName') ?? data_get($g, 'status');
                         $isEnded = $statusName ? (stripos((string)$statusName, 'finish') !== false || stripos((string)$statusName, 'ended') !== false) : false;
+                        try { $dt = $dt->copy()->setTimezone($tz)->second(0)->micro(0); } catch (\Throwable $e) {}
                         if ($isEnded || $dt->lte($now)) continue;
-                        try { $dt = $dt->copy()->utc()->second(0)->micro(0); } catch (\Throwable $e) {}
                         [$h,$d,$a] = $this->extractInlineOdds($g);
                         if (!is_numeric($h) || !is_numeric($d) || !is_numeric($a)) continue;
                         $title = trim((string)$homeName.' vs '.(string)$awayName);
@@ -196,7 +197,8 @@ class RebuildEvents extends Command
                 if (isset($json['data'])) { $items = $json['data']; }
                 elseif (isset($json[0])) { $items = $json; }
             }
-            $now = Carbon::now();
+            $tz = config('app.timezone');
+            $now = Carbon::now($tz);
             foreach ($items as $g) {
                 $homeName = data_get($g, 'homeTeam.name') ?? data_get($g, 'home.name') ?? data_get($g, 'home') ?? data_get($g, 'Home');
                 $awayName = data_get($g, 'awayTeam.name') ?? data_get($g, 'away.name') ?? data_get($g, 'away') ?? data_get($g, 'Away');
@@ -207,7 +209,7 @@ class RebuildEvents extends Command
                 $dt = null;
                 try { $dt = Carbon::parse($dateRaw ?: (data_get($g, 'dateUtc') ? '@'.data_get($g, 'dateUtc') : null)); } catch (\Throwable $e) {}
                 if (!$dt) continue;
-                try { $dt = $dt->copy()->utc()->second(0)->micro(0); } catch (\Throwable $e) {}
+                try { $dt = $dt->copy()->setTimezone($tz)->second(0)->micro(0); } catch (\Throwable $e) {}
                 [$h,$d,$a] = $this->extractInlineOdds($g);
                 if (!is_numeric($h) || !is_numeric($d) || !is_numeric($a)) continue;
                 $competition = 'TEST';

@@ -13,20 +13,26 @@ class OddsController extends Controller
      */
     public function markets(Event $event, Request $request)
     {
-        // Для тестовой лиги: читаем локальный JSON (по умолчанию base_path('odds_test.json'))
+        \Barryvdh\Debugbar\Facades\Debugbar::addMessage($event->external_id, 'external_id');
         if ((string)$event->competition === 'TEST' || str_starts_with((string)$event->external_id, 'test:')) {
             $path = env('TEST_ODDS_FILE', base_path('odds_test.json'));
             try {
                 if (is_string($path) && file_exists($path)) {
                     $json = json_decode(file_get_contents($path), true);
                     $data = is_array($json) ? ($json['data'] ?? []) : [];
-                    $first = is_array($data) && isset($data[0]) ? $data[0] : null;
-                    $blocks = is_array($first) ? ($first['odds'] ?? []) : [];
+                    $match = null;
+                    $eh = trim(strtolower((string)($event->home_team ?? '')));
+                    $ea = trim(strtolower((string)($event->away_team ?? '')));
+                    foreach ((array)$data as $row) {
+                        $h = trim(strtolower((string)(data_get($row, 'homeTeam.name') ?? data_get($row, 'home') ?? '')));
+                        $a = trim(strtolower((string)(data_get($row, 'awayTeam.name') ?? data_get($row, 'away') ?? '')));
+                        if ($h !== '' && $a !== '' && $h === $eh && $a === $ea) { $match = $row; break; }
+                    }
+                    $blocks = is_array($match) ? ($match['odds'] ?? []) : [];
                     $out = [];
                     foreach ($blocks as $m) {
                         $marketId = $m['marketId'] ?? null;
                         $name = (string)($m['marketName'] ?? '');
-                        // пропускаем основной рынок 1x2
                         if ($marketId === 1) { continue; }
                         $sels = $m['odds'] ?? [];
                         $norm = [];
@@ -37,7 +43,6 @@ class OddsController extends Controller
                             $norm[] = ['label' => $label, 'price' => (float)$price];
                         }
                         if (!empty($norm)) {
-                            // Если имя рынка пустое, сформируем из id или первой метки
                             if ($name === '' || $name === null) {
                                 $name = match ((int)$marketId) {
                                     12 => 'Double Chance',
@@ -51,12 +56,12 @@ class OddsController extends Controller
                         }
                         if (count($out) >= 12) break;
                     }
-                    return response()->json(['ok' => true, 'count' => count($out), 'markets' => $out]);
+                    if (!empty($out)) {
+                        return response()->json(['ok' => true, 'count' => count($out), 'markets' => $out]);
+                    }
                 }
             } catch (\Throwable $e) {
-                // Фолбэк: возвращаем синтетические рынки на основе базовых коэффициентов
             }
-            // Синтетический фолбэк (если файла нет или парсинг не удался)
             $home = (float)($event->home_odds ?? 2.0);
             $draw = (float)($event->draw_odds ?? 3.2);
             $away = (float)($event->away_odds ?? 4.0);
@@ -81,6 +86,7 @@ class OddsController extends Controller
             return response()->json(['ok' => false, 'error' => 'Missing external_id for event'], 400);
         }
         // Делегируем к прямому запросу рынков по gameId
+        \Barryvdh\Debugbar\Facades\Debugbar::addMessage($event->external_id, 'external_id');
         return $this->marketsByGame($request, $event->external_id);
     }
 
@@ -96,8 +102,14 @@ class OddsController extends Controller
                 try {
                     $json = json_decode(file_get_contents($path), true);
                     $data = is_array($json) ? ($json['data'] ?? []) : [];
-                    $first = is_array($data) && isset($data[0]) ? $data[0] : null;
-                    $blocks = is_array($first) ? ($first['odds'] ?? []) : [];
+                    $needle = (string)$gameId;
+                    if (str_starts_with($needle, 'test:')) { $needle = substr($needle, 5); }
+                    $chosenRow = null;
+                    foreach ((array)$data as $row) {
+                        $rid = data_get($row, 'id');
+                        if ($rid !== null && (string)$rid === (string)$needle) { $chosenRow = $row; break; }
+                    }
+                    $blocks = is_array($chosenRow) ? ($chosenRow['odds'] ?? []) : [];
                     $out = [];
                     foreach ($blocks as $m) {
                         $marketId = $m['marketId'] ?? null;
@@ -116,7 +128,7 @@ class OddsController extends Controller
                         }
                         if (count($out) >= 12) break;
                     }
-                    return response()->json(['ok' => true, 'count' => count($out), 'markets' => $out]);
+                    if (!empty($out)) { return response()->json(['ok' => true, 'count' => count($out), 'markets' => $out]); }
                 } catch (\Throwable $e) {
                     // fallthrough to API
                 }
@@ -129,6 +141,7 @@ class OddsController extends Controller
         }
         $headers = ['X-API-KEY' => $apiKey, 'Accept' => 'application/json'];
         $bookmakerId = (int) ($request->query('bookmakerId', 2));
+        \Barryvdh\Debugbar\Facades\Debugbar::addMessage($gameId, 'gameId');
         try {
             $endpoint = $base.'/Odds/'.urlencode((string)$gameId);
             $resp = \Illuminate\Support\Facades\Http::withHeaders($headers)->timeout(12)->get($endpoint, ['bookmakerId' => $bookmakerId]);
