@@ -1,4 +1,4 @@
-<div class="card {{ ($first ?? false) ? 'mt-20' : 'mt-8' }}">
+<div class="card {{ ($first ?? false) ? 'mt-20' : 'mt-8' }} {{ !empty($league_id) ? 'league-' . $league_id : '' }}" data-league-id="{{ $league_id ?? '' }}" data-league-code="{{ $league_code ?? '' }}">
     <h2 class="font-bold">{{ $title }}</h2>
     <table class="responsive-table line">
         <thead>

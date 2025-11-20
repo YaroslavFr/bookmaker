@@ -54,6 +54,13 @@ class BetController extends Controller
                 ->filter()
                 ->values();
 
+            $user = \Illuminate\Support\Facades\Auth::user();
+            $role = is_object($user) ? strtolower((string)($user->role ?? '')) : '';
+            $canSeeTest = in_array($role, ['admin','moderator'], true);
+            if (!$canSeeTest) {
+                $competitions = $competitions->filter(function($code){ return (string)$code !== 'TEST'; })->values();
+            }
+
             // Детерминированный порядок лиг по конфигу leagues.default_ids
             try {
                 $defIds = (array) config('leagues.default_ids', []);
@@ -73,6 +80,7 @@ class BetController extends Controller
             } catch (\Throwable $e) { /* keep natural order */ }
 
             $eventsByCompetition = [];
+            $leaguesConfAll = (array) config('leagues.leagues', []);
             foreach ($competitions as $comp) {
                 $collection = Event::with('bets')
                     ->where('competition', $comp)
@@ -88,6 +96,8 @@ class BetController extends Controller
                 $leagues[] = [
                     'title' => (string) ($leagueTitlesByCode[(string)$comp] ?? (string)$comp),
                     'events' => $collection,
+                    'league_code' => (string) $comp,
+                    'league_id' => (int) ((array_key_exists((string)$comp, $leaguesConfAll) && isset($leaguesConfAll[(string)$comp]['id'])) ? (int)$leaguesConfAll[(string)$comp]['id'] : 0),
                 ];
 
                 // Ассоциативное кеширование лент по коду чемпионата
@@ -345,6 +355,7 @@ class BetController extends Controller
         $key = config('services.sstats.key');
         $headers = $key ? ['X-API-KEY' => $key] : [];
         $statusEnd = 8; // Законченные матчи.
+        
         // Берём external_id запланированных событий за прошедшие даты чтобы проставить результаты и статус finished
         $scheduledExternalIds = $this->checkResultSchedule();
         

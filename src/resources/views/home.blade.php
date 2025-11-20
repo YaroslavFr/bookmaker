@@ -40,6 +40,8 @@
                             'title' => ($league['title'] ?? 'Лига'),
                             'events' => $events,
                             'first' => $loop->first,
+                            'league_id' => ($league['league_id'] ?? null),
+                            'league_code' => ($league['league_code'] ?? null),
                         ])
                     @endif
                 @endforeach
