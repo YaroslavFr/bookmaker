@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class AdminController extends Controller
 {
@@ -52,6 +53,31 @@ class AdminController extends Controller
             'balance' => ['required','numeric','min:0'],
         ]);
 
+        $user->balance = (float) $data['balance'];
+        $user->save();
+
+        return redirect()->route('admin.index');
+    }
+
+    public function update(User $user, Request $request)
+    {
+        $actor = Auth::user();
+        if (!$actor || strtolower((string)($actor->role ?? '')) !== 'admin') {
+            abort(403);
+        }
+
+        $data = $request->validate([
+            'email' => ['nullable','email', Rule::unique('users','email')->ignore($user->id)],
+            'password' => ['nullable','string','min:6'],
+            'balance' => ['required','numeric','min:0'],
+        ]);
+
+        if (array_key_exists('email', $data) && $data['email'] !== null && $data['email'] !== $user->email) {
+            $user->email = (string) $data['email'];
+        }
+        if (!empty($data['password'])) {
+            $user->password = (string) $data['password'];
+        }
         $user->balance = (float) $data['balance'];
         $user->save();
 

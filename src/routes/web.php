@@ -59,4 +59,5 @@ Route::middleware('auth')->group(function () {
     Route::get('/admin/users/create', [AdminController::class, 'create'])->name('admin.users.create');
     Route::post('/admin/users', [AdminController::class, 'store'])->name('admin.users.store');
     Route::post('/admin/users/{user}/balance', [AdminController::class, 'updateBalance'])->name('admin.users.balance');
+    Route::post('/admin/users/{user}/update', [AdminController::class, 'update'])->name('admin.users.update');
 });
