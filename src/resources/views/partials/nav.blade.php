@@ -15,6 +15,13 @@
                class="text-blue-600 hover:underline {{ request()->is('docs') ? 'font-semibold' : '' }}"
                aria-current="{{ request()->is('docs') ? 'page' : '' }}">Документация</a>
         </li>
+        @if(auth()->check() && strtolower((string) (auth()->user()->role ?? '')) === 'admin')
+        <li>
+            <a href="{{ route('admin.index') }}"
+               class="text-blue-600 hover:underline {{ url()->current() === route('admin.index') ? 'font-semibold' : '' }}"
+               aria-current="{{ url()->current() === route('admin.index') ? 'page' : '' }}">Админка</a>
+        </li>
+        @endif
         
     </ul>
 </nav>

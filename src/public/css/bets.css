@@ -66,6 +66,10 @@ main {
   padding: 16px;
 }
 
+div[data-league-code="TEST"]{
+  	background: linear-gradient(90deg, #b9deed, #efefef);
+}
+
 h2 {
   margin-top: 0;
 }
