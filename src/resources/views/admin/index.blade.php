@@ -15,34 +15,44 @@
 <body>
     @include('partials.header')
     <main>
-    <div class="row">
-        <h1 class="text-2xl font-bold mb-6">Админка</h1>
+        <div class="container">
+    <div class="mt-4 row">
+        <h1 class="text-2xl font-bold">Админка</h1>
     </div>
-    <div class="px-8 mb-4">
+    <div class="mt-4 mb-4">
         <a href="{{ route('admin.users.create') }}" class="btn btn-primary">Создать пользователя</a>
     </div>
     <div class="card admin-users-block">
-        <h2 class="px-4 pl-8">Последние пользователи</h2>
+        <h2 class="m-0 border-b-1 border-blue-100 pb-2">Последние пользователи</h2>
         <div class="responsive-table rt rt--users">
-            <div class="rt-head">
+            <div class="grid grid-cols-7 p-1 pl-0 border-b-1 border-blue-100">
                 <div class="rt-th">ID</div>
                 <div class="rt-th">Логин</div>
                 <div class="rt-th">Имя</div>
                 <div class="rt-th">Email</div>
                 <div class="rt-th">Роль</div>
+                <div class="rt-th">Баланс</div>
             </div>
-            <div class="rt-body">
+            <div class="">
                 @foreach(($users ?? []) as $u)
-                <div class="rt-row">
+                <div class="grid grid-cols-7 border-b-1 border-blue-100 items-center">
                     <div class="" data-label="ID">{{ $u->id }}</div>
                     <div class="" data-label="Логин">{{ $u->username }}</div>
                     <div class="" data-label="Имя">{{ $u->name }}</div>
                     <div class="" data-label="Email">{{ $u->email }}</div>
                     <div class="" data-label="Роль">{{ $u->role ?? 'user' }}</div>
+                    <div class="" data-label="Баланс">
+                        <form method="post" action="{{ route('admin.users.balance', ['user' => $u->id]) }}" class="flex items-center gap-2">
+                            @csrf
+                            <input name="balance" type="number" step="0.01" min="0" value="{{ (float) ($u->balance ?? 0) }}" class="border rounded px-2 py-1 w-28" />
+                            <button type="submit" class="btn btn-primary btn-sm">Сохранить</button>
+                        </form>
+                    </div>
                 </div>
                 @endforeach
             </div>
         </div>
+    </div>
     </div>
 </main>
 </body>

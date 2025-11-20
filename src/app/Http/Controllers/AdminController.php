@@ -7,12 +7,13 @@ use App\Models\Event;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class AdminController extends Controller
 {
     public function index()
     {
-        $users = User::orderBy('id', 'desc')->limit(50)->get();
+        $users = User::orderBy('id', 'asc')->limit(50)->get();
         return view('admin.index', ['users' => $users]);
     }
 
@@ -37,6 +38,23 @@ class AdminController extends Controller
             'password' => $data['password'],
             'role' => $data['role'],
         ]);
+        return redirect()->route('admin.index');
+    }
+
+    public function updateBalance(User $user, Request $request)
+    {
+        $actor = Auth::user();
+        if (!$actor || strtolower((string)($actor->role ?? '')) !== 'admin') {
+            abort(403);
+        }
+
+        $data = $request->validate([
+            'balance' => ['required','numeric','min:0'],
+        ]);
+
+        $user->balance = (float) $data['balance'];
+        $user->save();
+
         return redirect()->route('admin.index');
     }
 }
