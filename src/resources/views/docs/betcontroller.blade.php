@@ -69,7 +69,7 @@
                     <div class="doc-code collapsed" id="code-store">
 <pre><code>// BetController@store — см. файл по ссылке ниже</code></pre>
                     </div>
-                    <button class="doc-code-toggle" data-target="code-store">Показать/скрыть</button>
+                    
                 </div>
             </section>
 
@@ -84,7 +84,6 @@
                     <div class="doc-code collapsed" id="code-settle">
 <pre><code>// BetController@settle — см. файл по ссылке ниже</code></pre>
                     </div>
-                    <button class="doc-code-toggle" data-target="code-settle">Показать/скрыть</button>
                 </div>
             </section>
 
@@ -99,7 +98,6 @@
                     <div class="doc-code collapsed" id="code-auto">
 <pre><code>// BetController@autoSettleDue — см. файл по ссылке ниже</code></pre>
                     </div>
-                    <button class="doc-code-toggle" data-target="code-auto">Показать/скрыть</button>
                 </div>
             </section>
 
@@ -114,7 +112,6 @@
                     <div class="doc-code collapsed" id="code-check">
 <pre><code>// BetController@checkResultSchedule — см. файл по ссылке ниже</code></pre>
                     </div>
-                    <button class="doc-code-toggle" data-target="code-check">Показать/скрыть</button>
                 </div>
             </section>
 
@@ -128,7 +125,6 @@
                     <div class="doc-code collapsed" id="code-cron">
 <pre><code>// BetController@cronStatus — см. файл по ссылке ниже</code></pre>
                     </div>
-                    <button class="doc-code-toggle" data-target="code-cron">Показать/скрыть</button>
                 </div>
             </section>
 
@@ -143,7 +139,6 @@
                     <div class="doc-code collapsed" id="code-unsettled">
 <pre><code>// BetController@settleUnsettledBets — см. файл по ссылке ниже</code></pre>
                     </div>
-                    <button class="doc-code-toggle" data-target="code-unsettled">Показать/скрыть</button>
                 </div>
             </section>
 
@@ -156,7 +151,7 @@
                         $code = is_file($path) ? file_get_contents($path) : '';
                     @endphp
                     <div class="doc-code collapsed" id="code-full">
-<pre><code>{{ e($code) }}</code></pre>
+<pre><code>{!! $code !!}</code></pre>
                     </div>
                     <button class="doc-code-toggle" data-target="code-full">Показать/скрыть</button>
                 </div>

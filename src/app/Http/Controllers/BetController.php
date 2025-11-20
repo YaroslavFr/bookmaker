@@ -372,9 +372,6 @@ class BetController extends Controller
             if ($homeScore === null || $awayScore === null) { $homeScore = 0; $awayScore = 0; }
             $ev = Event::where('external_id', $extId)->first();
             
-            $teamHome = data_get($payload, 'homeTeam.name') ?? data_get($payload, 'home') ?? ($ev->home_team ?? null);
-            $teamAway = data_get($payload, 'awayTeam.name') ?? data_get($payload, 'away') ?? ($ev->away_team ?? null);
-            
             if (!$ev) { continue; }
             $ev->home_result = $homeScore; $ev->away_result = $awayScore;
             $ev->home_ht_result = $homeSt1; $ev->away_ht_result = $awaySt1;

@@ -4,6 +4,7 @@ namespace App\Console;
 
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
+use Illuminate\Support\Facades\Log;
 
 class Kernel extends ConsoleKernel
 {
@@ -12,25 +13,8 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // Toggle sync via env SYNC_ENABLED (default: disabled for temporary pause)
-        if (env('SYNC_ENABLED', false)) {
-            // Sync EPL results every 10 minutes
-            $schedule->command('epl:sync-results')->everyTenMinutes();
-            // Optional: odds sync daily
-            $schedule->command('epl:sync-odds --limit=10')->dailyAt('06:00');
-        }
-
-        // Daily refresh for stats cache
-        $schedule->command('stats:refresh')->dailyAt('03:30');
-
-        if (env('SETTLE_ENABLED', true)) {
-            $schedule->call(function() {
-                app(\App\Http\Controllers\BetController::class)->autoSettleDue();
-            })->everyTwoMinutes()->name('bets:auto-settle')->withoutOverlapping();
-            $schedule->call(function() {
-                app(\App\Http\Controllers\BetController::class)->processDueScheduled100();
-            })->everyMinute()->name('events:process-due')->withoutOverlapping();
-        }
+        // Ежеминутно записывает отметку времени в storage/logs/cron_test.log
+        $schedule->command('rightInfileDate')->everyMinute()->name('cron:test')->withoutOverlapping();
     }
 
     /**
@@ -39,5 +23,6 @@ class Kernel extends ConsoleKernel
     protected function commands(): void
     {
         $this->load(__DIR__.'/Commands');
+        require base_path('routes/console.php');
     }
 }

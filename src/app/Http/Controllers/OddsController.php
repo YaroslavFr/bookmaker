@@ -141,7 +141,7 @@ class OddsController extends Controller
         }
         $headers = ['X-API-KEY' => $apiKey, 'Accept' => 'application/json'];
         $bookmakerId = (int) ($request->query('bookmakerId', 2));
-        \Barryvdh\Debugbar\Facades\Debugbar::addMessage($gameId, 'gameId');
+
         try {
             $endpoint = $base.'/Odds/'.urlencode((string)$gameId);
             $resp = \Illuminate\Support\Facades\Http::withHeaders($headers)->timeout(12)->get($endpoint, ['bookmakerId' => $bookmakerId]);
