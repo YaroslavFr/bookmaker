@@ -198,7 +198,7 @@
 @endtask
 
 @story('release')
-    env-apply
-    deploy
-    assets-build
+deploy
+assets-build
+env-apply
 @endstory

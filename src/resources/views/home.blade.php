@@ -114,10 +114,15 @@
                                             </div>
                                             @php($hr = is_numeric($l->event->home_result ?? null) ? (int) $l->event->home_result : null)
                                             @php($ar = is_numeric($l->event->away_result ?? null) ? (int) $l->event->away_result : null)
+                                            @php($stClass = 'text-gray-500')
+                                                @php($stText = 'Не рассчитано')
+                                                @if($l->settled_at)
+                                                    @php($stClass = ($l->is_win === true) ? 'text-green-500' : (($l->is_win === null) ? 'text-yellow-500' : 'text-red-600'))
+                                                @endif
                                             @if($hr !== null && $ar !== null)
-                                                <div class="muted">Счёт: {{ $hr }}:{{ $ar }}</div>
+                                                <div class="{{ $stClass }}">Счёт: {{ $hr }}:{{ $ar }}</div>
                                             @endif
-                                        </div>
+                                            </div>
                                     @endforeach
                                 </div>
                                 <div class="rt-cell" data-label="Сумма">{{ $coupon->amount_demo ? number_format($coupon->amount_demo, 2) : '—' }}</div>
