@@ -8,7 +8,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
         .doc-container { max-width: 960px; margin: 0 auto; padding: 16px; }
-        .doc-section { margin-top: 24px; }
+        .doc-section { margin: 54px 0; }
         .doc-card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; }
         .doc-card h2 { font-weight: 700; font-size: 18px; margin-bottom: 12px; }
         .doc-list { list-style: auto; padding-left: 20px; }
@@ -46,6 +46,13 @@
                     <li><a href="#keys">Ключи и планировщик</a></li>
                     <li><a href="#stats">Статистика (страница /stats)</a></li>
                     <li><a href="#deploy">Деплой</a></li>
+                    <li><a href="#common-commands">Часто используемые команды</a></li>
+                    
+                </ul>
+            </div>
+            <div class="doc-toc" aria-label="Содержание">
+                <div class="doc-toc-title">Другие страницы документации</div>
+                <ul class="doc-toc-list">
                     <li><a href="/docs/betcontroller/">BetController — полный код и описание</a></li>
                 </ul>
             </div>
@@ -602,8 +609,24 @@ docker compose exec app php artisan serve --host=0.0.0.0 --port=8000 --no-reload
 docker exec games_app php artisan serve --host=0.0.0.0 --port=8000 --no-reload
 </code></pre></div>
 
+                    
+                    
                 </div>
             </section>
+            <section class="doc-section" id="common-commands">
+                        <div class="doc-card">
+                            <h2>Самые частоиспользуемые команды</h2>
+                            <div class="doc-code"><pre><code># Запустить релиз локально (если PHP установлен и вы в каталоге src)
+php vendor/bin/envoy run release --server=beget --branch=main
+
+# Альтернатива без Compose (по имени контейнера)
+docker exec games_app php artisan serve --host=0.0.0.0 --port=8000 --no-reload
+
+# Создание тестовой лиги
+docker compose exec app php artisan events:create-test
+</code></pre></div>
+                        </div>
+                    </section>
         </div>
     </main>
 </body>
