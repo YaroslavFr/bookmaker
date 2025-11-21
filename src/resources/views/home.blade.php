@@ -317,8 +317,13 @@
                     if (norm.includes('second half winner')) return MARKET_TRANSLATIONS['second half winner'];
                     return raw; // без перевода — оригинал
                 }
-                const base = "{{ url('/odds/game') }}";
-                const url = base + '/' + encodeURIComponent(String(gid)) + '?bookmakerId=2&_ts=' + Date.now();
+                const baseGame = "{{ url('/odds/game') }}";
+                const baseEvent = "{{ url('/events') }}";
+                const leagueCode = (function(){ const card = t.closest('.card'); return card ? (card.getAttribute('data-league-code') || '') : ''; })();
+                const isTestLeague = String(leagueCode).toUpperCase() === 'TEST';
+                const url = isTestLeague
+                    ? (baseEvent + '/' + encodeURIComponent(String(eid)) + '/markets')
+                    : (baseGame + '/' + encodeURIComponent(String(gid)) + '?bookmakerId=2&_ts=' + Date.now());
                 const resp = await fetch(url, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
                 if (!resp.ok) throw new Error('HTTP ' + resp.status);
                 const json = await resp.json();

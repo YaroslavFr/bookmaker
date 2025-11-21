@@ -1,0 +1,981 @@
+{
+    "status": "OK",
+    "count": 1,
+    "data": [
+        {
+            "bookmakerId": 2,
+            "bookmakerName": "Marathonbet",
+            "odds": [
+                {
+                    "marketId": 1,
+                    "marketName": "Match Winner",
+                    "odds": [
+                        {
+                            "name": "Home",
+                            "value": 6.65,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Draw",
+                            "value": 4.55,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Away",
+                            "value": 1.51,
+                            "openingValue": null
+                        }
+                    ]
+                },
+                {
+                    "marketId": 3,
+                    "marketName": "Second Half Winner",
+                    "odds": [
+                        {
+                            "name": "Home",
+                            "value": 5.13,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Draw",
+                            "value": 2.81,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Away",
+                            "value": 1.78,
+                            "openingValue": null
+                        }
+                    ]
+                },
+                {
+                    "marketId": 4,
+                    "marketName": "Asian Handicap",
+                    "odds": [
+                        {
+                            "name": "Home -0.75",
+                            "value": 8.5,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Away -0.75",
+                            "value": 1.03,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Home +0",
+                            "value": 4.85,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Away +0",
+                            "value": 1.14,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Home +0.25",
+                            "value": 3.28,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Away +0.25",
+                            "value": 1.29,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Home +0.75",
+                            "value": 2.28,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Away +0.75",
+                            "value": 1.57,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Home +1",
+                            "value": 2.02,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Away +1",
+                            "value": 1.8,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Home +2",
+                            "value": 1.24,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Away +2",
+                            "value": 3.5,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Home +3",
+                            "value": 1.02,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Away +3",
+                            "value": 8.2,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Home +1.25",
+                            "value": 1.71,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Away +1.25",
+                            "value": 2.04,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Home +1.5",
+                            "value": 1.54,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Away +1.5",
+                            "value": 2.32,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Home +1.75",
+                            "value": 1.39,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Away +1.75",
+                            "value": 2.72,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Home +2.25",
+                            "value": 1.18,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Away +2.25",
+                            "value": 3.94,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Home +2.5",
+                            "value": 1.15,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Away +2.5",
+                            "value": 4.3,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Home +2.75",
+                            "value": 1.08,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Away +2.75",
+                            "value": 5.5,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Home +3.5",
+                            "value": 1,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Away +3.5",
+                            "value": 9,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Home +3.25",
+                            "value": 1.01,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Away +3.25",
+                            "value": 8.6,
+                            "openingValue": null
+                        }
+                    ]
+                },
+                {
+                    "marketId": 5,
+                    "marketName": "Goals Over/Under",
+                    "odds": [
+                        {
+                            "name": "Over 1.5",
+                            "value": 1.21,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 1.5",
+                            "value": 3.84,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 1.75",
+                            "value": 1.26,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 1.75",
+                            "value": 3.48,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 2.0",
+                            "value": 1.33,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 2.0",
+                            "value": 3.08,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 2.25",
+                            "value": 1.54,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 2.25",
+                            "value": 2.38,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 2.5",
+                            "value": 1.78,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 2.5",
+                            "value": 2.06,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 2.75",
+                            "value": 1.93,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 2.75",
+                            "value": 1.81,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 3.5",
+                            "value": 2.84,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 3.5",
+                            "value": 1.36,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 1.0",
+                            "value": 1,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 1.0",
+                            "value": 10.5,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 1.25",
+                            "value": 1.1,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 1.25",
+                            "value": 5.5,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 3.0",
+                            "value": 2.26,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 3.0",
+                            "value": 1.58,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 4.5",
+                            "value": 5.3,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 4.5",
+                            "value": 1.09,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 3.25",
+                            "value": 2.57,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 3.25",
+                            "value": 1.44,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 3.75",
+                            "value": 3.42,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 3.75",
+                            "value": 1.25,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 4.0",
+                            "value": 4.6,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 4.0",
+                            "value": 1.14,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 4.25",
+                            "value": 4.95,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 4.25",
+                            "value": 1.11,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 4.75",
+                            "value": 6.8,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 4.75",
+                            "value": 1.04,
+                            "openingValue": null
+                        }
+                    ]
+                },
+                {
+                    "marketId": 6,
+                    "marketName": "Goals Over/Under First Half",
+                    "odds": [
+                        {
+                            "name": "Over 1.5",
+                            "value": 2.67,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 1.5",
+                            "value": 1.47,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 2.0",
+                            "value": 5.35,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 2.0",
+                            "value": 1.14,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 2.5",
+                            "value": 6.55,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 2.5",
+                            "value": 1.08,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 0.5",
+                            "value": 1.35,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 0.5",
+                            "value": 3.18,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 1.0",
+                            "value": 1.75,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 1.0",
+                            "value": 2.12,
+                            "openingValue": null
+                        }
+                    ]
+                },
+                {
+                    "marketId": 26,
+                    "marketName": "Goals Over/Under - Second Half",
+                    "odds": [
+                        {
+                            "name": "Over 1.5",
+                            "value": 2.02,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 1.5",
+                            "value": 1.82,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 2.0",
+                            "value": 3.18,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 2.0",
+                            "value": 1.35,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 2.5",
+                            "value": 4.2,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 2.5",
+                            "value": 1.21,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 0.5",
+                            "value": 1.19,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 0.5",
+                            "value": 4.45,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 1.0",
+                            "value": 1.37,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 1.0",
+                            "value": 3.08,
+                            "openingValue": null
+                        }
+                    ]
+                },
+                {
+                    "marketId": 7,
+                    "marketName": "HT/FT Double",
+                    "odds": [
+                        {
+                            "name": "Home/Draw",
+                            "value": 19.5,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Home/Away",
+                            "value": 26,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Draw/Away",
+                            "value": 4.1,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Draw/Draw",
+                            "value": 6.45,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Home/Home",
+                            "value": 11.5,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Draw/Home",
+                            "value": 14.25,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Away/Home",
+                            "value": 58,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Away/Draw",
+                            "value": 18.75,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Away/Away",
+                            "value": 2.05,
+                            "openingValue": null
+                        }
+                    ]
+                },
+                {
+                    "marketId": 8,
+                    "marketName": "Both Teams Score",
+                    "odds": [
+                        {
+                            "name": "Yes",
+                            "value": 1.87,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "No",
+                            "value": 1.83,
+                            "openingValue": null
+                        }
+                    ]
+                },
+                {
+                    "marketId": 29,
+                    "marketName": "Win to Nil - Home",
+                    "odds": [
+                        {
+                            "name": "Yes",
+                            "value": 11,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "No",
+                            "value": 1.01,
+                            "openingValue": null
+                        }
+                    ]
+                },
+                {
+                    "marketId": 30,
+                    "marketName": "Win to Nil - Away",
+                    "odds": [
+                        {
+                            "name": "Yes",
+                            "value": 2.41,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "No",
+                            "value": 1.5,
+                            "openingValue": null
+                        }
+                    ]
+                },
+                {
+                    "marketId": 9,
+                    "marketName": "Handicap Result",
+                    "odds": [
+                        {
+                            "name": "Home -1",
+                            "value": 7.2,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Away -1",
+                            "value": 1.14,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Draw -1",
+                            "value": 4.1,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Home +1",
+                            "value": 2.71,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Draw +1",
+                            "value": 3.48,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Away +1",
+                            "value": 2.32,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Home +2",
+                            "value": 1.54,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Draw +2",
+                            "value": 4.5,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Away +2",
+                            "value": 4.3,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Home +3",
+                            "value": 1.15,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Draw +3",
+                            "value": 7.3,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Away +3",
+                            "value": 9,
+                            "openingValue": null
+                        }
+                    ]
+                },
+                {
+                    "marketId": 10,
+                    "marketName": "Exact Score",
+                    "odds": [
+                        {
+                            "name": "1:0",
+                            "value": 16,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "2:0",
+                            "value": 38,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "2:1",
+                            "value": 18.75,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "3:0",
+                            "value": 111,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "3:1",
+                            "value": 64,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "3:2",
+                            "value": 61,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "0:0",
+                            "value": 14.5,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "1:1",
+                            "value": 7.5,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "2:2",
+                            "value": 17.25,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "0:1",
+                            "value": 6.25,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "0:2",
+                            "value": 6.55,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "0:3",
+                            "value": 9.7,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "1:2",
+                            "value": 7.5,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "1:3",
+                            "value": 11.75,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "2:3",
+                            "value": 26,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "3:3",
+                            "value": 78,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "0:4",
+                            "value": 18.75,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "1:4",
+                            "value": 23,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "2:4",
+                            "value": 51,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "0:5",
+                            "value": 46,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "0:6",
+                            "value": 106,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "1:5",
+                            "value": 53,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "2:5",
+                            "value": 106,
+                            "openingValue": null
+                        }
+                    ]
+                },
+                {
+                    "marketId": 12,
+                    "marketName": "Double Chance",
+                    "odds": [
+                        {
+                            "name": "Home/Draw",
+                            "value": 2.71,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Home/Away",
+                            "value": 1.24,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Draw/Away",
+                            "value": 1.14,
+                            "openingValue": null
+                        }
+                    ]
+                },
+                {
+                    "marketId": 13,
+                    "marketName": "First Half Winner",
+                    "odds": [
+                        {
+                            "name": "Home",
+                            "value": 6.2,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Draw",
+                            "value": 2.36,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Away",
+                            "value": 1.99,
+                            "openingValue": null
+                        }
+                    ]
+                },
+                {
+                    "marketId": 14,
+                    "marketName": "Team To Score First",
+                    "odds": [
+                        {
+                            "name": "Home",
+                            "value": 3.36,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Draw",
+                            "value": 14.5,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Away",
+                            "value": 1.39,
+                            "openingValue": null
+                        }
+                    ]
+                },
+                {
+                    "marketId": 15,
+                    "marketName": "Team To Score Last",
+                    "odds": [
+                        {
+                            "name": "Home",
+                            "value": 3.32,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Draw",
+                            "value": 14.5,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Away",
+                            "value": 1.4,
+                            "openingValue": null
+                        }
+                    ]
+                },
+                {
+                    "marketId": 16,
+                    "marketName": "Total - Home",
+                    "odds": [
+                        {
+                            "name": "Over 1.5",
+                            "value": 4.55,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 1.5",
+                            "value": 1.2,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 2.5",
+                            "value": 14.5,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 2.5",
+                            "value": 1,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 1",
+                            "value": 2.98,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 1",
+                            "value": 1.4,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 2",
+                            "value": 13.25,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 2",
+                            "value": 1.01,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 0.5",
+                            "value": 1.65,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 0.5",
+                            "value": 2.11,
+                            "openingValue": null
+                        }
+                    ]
+                },
+                {
+                    "marketId": 17,
+                    "marketName": "Total - Away",
+                    "odds": [
+                        {
+                            "name": "Over 1.5",
+                            "value": 1.6,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 1.5",
+                            "value": 2.33,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 2.5",
+                            "value": 2.89,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 2.5",
+                            "value": 1.41,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 3.5",
+                            "value": 6.1,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 3.5",
+                            "value": 1.1,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 1",
+                            "value": 1.15,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 1",
+                            "value": 5,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 2",
+                            "value": 2.14,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 2",
+                            "value": 1.72,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Over 3",
+                            "value": 5.15,
+                            "openingValue": null
+                        },
+                        {
+                            "name": "Under 3",
+                            "value": 1.15,
+                            "openingValue": null
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "traceId": "00-3ddd2ab59c15ca43e62648007685d796-ebf5157f6ebcd43d-00"
+}

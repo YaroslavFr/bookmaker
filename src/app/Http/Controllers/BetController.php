@@ -627,7 +627,9 @@ class BetController extends Controller
                 }
                 if (empty($payload)) {
                     try {
-                        $path = base_path('result_test.json');
+                        $path = env('TEST_RESULTS_FILE', base_path('test_results.json'));
+                        $fallback1 = base_path('result_test.json');
+                        if (!is_string($path) || !file_exists($path)) { $path = file_exists($fallback1) ? $fallback1 : $path; }
                         if (is_file($path)) {
                             $data = json_decode(file_get_contents($path), true);
                             $rows = data_get($data, 'data', []);

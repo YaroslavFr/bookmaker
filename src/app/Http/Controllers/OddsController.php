@@ -15,124 +15,45 @@ class OddsController extends Controller
     {
         \Barryvdh\Debugbar\Facades\Debugbar::addMessage($event->external_id, 'external_id');
         if ((string)$event->competition === 'TEST' || str_starts_with((string)$event->external_id, 'test:')) {
-            $path = env('TEST_ODDS_FILE', base_path('odds_test.json'));
-            try {
-                if (is_string($path) && file_exists($path)) {
-                    $json = json_decode(file_get_contents($path), true);
-                    $data = is_array($json) ? ($json['data'] ?? []) : [];
-                    $match = null;
-                    $eh = trim(strtolower((string)($event->home_team ?? '')));
-                    $ea = trim(strtolower((string)($event->away_team ?? '')));
-                    foreach ((array)$data as $row) {
-                        $h = trim(strtolower((string)(data_get($row, 'homeTeam.name') ?? data_get($row, 'home') ?? '')));
-                        $a = trim(strtolower((string)(data_get($row, 'awayTeam.name') ?? data_get($row, 'away') ?? '')));
-                        if ($h !== '' && $a !== '' && $h === $eh && $a === $ea) { $match = $row; break; }
-                    }
-                    $blocks = is_array($match) ? ($match['odds'] ?? []) : [];
-                    $out = [];
-                    foreach ($blocks as $m) {
-                        $marketId = $m['marketId'] ?? null;
-                        $name = (string)($m['marketName'] ?? '');
-                        if ($marketId === 1) { continue; }
-                        $sels = $m['odds'] ?? [];
-                        $norm = [];
-                        foreach ($sels as $s) {
-                            $label = (string)($s['name'] ?? '');
-                            $price = $s['value'] ?? $s['odd'] ?? $s['rate'] ?? null;
-                            if (!is_numeric($price)) continue;
-                            $norm[] = ['label' => $label, 'price' => (float)$price];
-                        }
-                        if (!empty($norm)) {
-                            if ($name === '' || $name === null) {
-                                $name = match ((int)$marketId) {
-                                    12 => 'Double Chance',
-                                    5 => 'Total 2.5',
-                                    16 => 'Total 1.5',
-                                    17 => 'Total 1.5 (Alt)',
-                                    default => ($norm[0]['label'] ?? 'Market '.(string)$marketId),
-                                };
-                            }
-                            $out[] = ['name' => $name, 'selections' => $norm];
-                        }
-                        if (count($out) >= 12) break;
-                    }
-                    if (!empty($out)) {
-                        return response()->json(['ok' => true, 'count' => count($out), 'markets' => $out]);
-                    }
-                }
-            } catch (\Throwable $e) {
+            $path2 = base_path('test_extra_odds.json');
+            $markets = [];
+            if (is_string($path2) && file_exists($path2)) {
+                $json2 = json_decode(file_get_contents($path2), true);
+                $markets = data_get($json2, 'data.0.odds');
             }
-            $home = (float)($event->home_odds ?? 2.0);
-            $draw = (float)($event->draw_odds ?? 3.2);
-            $away = (float)($event->away_odds ?? 4.0);
-            $inv = function($x) { return $x > 0 ? (1.0 / $x) : 0.0; };
-            $dc = function($a, $b) use ($inv) { $p = $inv($a) + $inv($b); return $p > 0 ? round(1.0 / $p, 2) : 1.5; };
-            $clamp = function($v, $min, $max) { return max($min, min($max, $v)); };
-            $markets = [
-                [ 'name' => 'Double Chance', 'selections' => [
-                    [ 'label' => '1X', 'price' => $clamp($dc($home, $draw), 1.15, 2.20) ],
-                    [ 'label' => '12', 'price' => $clamp($dc($home, $away), 1.30, 2.50) ],
-                    [ 'label' => 'X2', 'price' => $clamp($dc($draw, $away), 1.20, 2.30) ],
-                ]],
-                [ 'name' => 'Total 2.5', 'selections' => [
-                    [ 'label' => 'Over 2.5', 'price' => $clamp(round(1.88 + (($home - $away) * 0.05), 2), 1.55, 2.50) ],
-                    [ 'label' => 'Under 2.5', 'price' => $clamp(round(1.92 - (($home - $away) * 0.05), 2), 1.55, 2.60) ],
-                ]],
-            ];
-            return response()->json(['ok' => true, 'count' => count($markets), 'markets' => $markets]);
+            return $this->marketsByGame($request, $event->external_id, is_array($markets) ? $markets : []);
         }
 
         if (!$event->external_id) {
             return response()->json(['ok' => false, 'error' => 'Missing external_id for event'], 400);
         }
-        // Делегируем к прямому запросу рынков по gameId
         \Barryvdh\Debugbar\Facades\Debugbar::addMessage($event->external_id, 'external_id');
-        return $this->marketsByGame($request, $event->external_id);
+        return $this->marketsByGame($request, $event->external_id, null);
     }
 
     /**
      * Fetch extra markets by direct gameId via /Odds/{gameId} with bookmakerId=2.
      */
-    public function marketsByGame(Request $request, $gameId)
+    public function marketsByGame(Request $request, $gameId, $preloadedMarkets = null)
     {
-        // Для тестовой лиги/локальных gameId используем файл odds_test.json
-        if (str_starts_with((string)$gameId, 'test:') || env('TEST_LEAGUE', false)) {
-            $path = env('TEST_ODDS_FILE', base_path('odds_test.json'));
-            if (is_string($path) && file_exists($path)) {
-                try {
-                    $json = json_decode(file_get_contents($path), true);
-                    $data = is_array($json) ? ($json['data'] ?? []) : [];
-                    $needle = (string)$gameId;
-                    if (str_starts_with($needle, 'test:')) { $needle = substr($needle, 5); }
-                    $chosenRow = null;
-                    foreach ((array)$data as $row) {
-                        $rid = data_get($row, 'id');
-                        if ($rid !== null && (string)$rid === (string)$needle) { $chosenRow = $row; break; }
-                    }
-                    $blocks = is_array($chosenRow) ? ($chosenRow['odds'] ?? []) : [];
-                    $out = [];
-                    foreach ($blocks as $m) {
-                        $marketId = $m['marketId'] ?? null;
-                        if ($marketId === 1) { continue; }
-                        $name = (string)($m['marketName'] ?? ('Market '.(string)$marketId));
-                        $sels = $m['odds'] ?? [];
-                        $norm = [];
-                        foreach ($sels as $s) {
-                            $label = (string)($s['name'] ?? '');
-                            $price = $s['value'] ?? $s['odd'] ?? $s['rate'] ?? null;
-                            if (!is_numeric($price)) continue;
-                            $norm[] = ['label' => $label, 'price' => (float)$price];
-                        }
-                        if (!empty($norm)) {
-                            $out[] = ['name' => $name, 'selections' => $norm];
-                        }
-                        if (count($out) >= 12) break;
-                    }
-                    if (!empty($out)) { return response()->json(['ok' => true, 'count' => count($out), 'markets' => $out]); }
-                } catch (\Throwable $e) {
-                    // fallthrough to API
+        if (is_array($preloadedMarkets) && !empty($preloadedMarkets)) {
+            $out = [];
+            foreach ($preloadedMarkets as $m) {
+                $marketId = $m['marketId'] ?? null;
+                if ($marketId === 1) { continue; }
+                $name = (string)($m['marketName'] ?? ('Market '.(string)$marketId));
+                $sels = $m['odds'] ?? [];
+                $norm = [];
+                foreach ($sels as $s) {
+                    $label = (string)($s['name'] ?? '');
+                    $price = $s['value'] ?? $s['odd'] ?? $s['rate'] ?? null;
+                    if (!is_numeric($price)) continue;
+                    $norm[] = ['label' => $label, 'price' => (float)$price];
                 }
+                if (!empty($norm)) { $out[] = ['name' => $name, 'selections' => $norm]; }
+                if (count($out) >= 12) break;
             }
+            return response()->json(['ok' => true, 'count' => count($out), 'markets' => $out]);
         }
         $base = rtrim(config('services.sstats.base_url', 'https://api.sstats.net'), '/');
         $apiKey = config('services.sstats.key');
@@ -194,7 +115,7 @@ class OddsController extends Controller
                 }
                 if (count($out) >= 10) break;
             }
-            
+            \Barryvdh\Debugbar\Facades\Debugbar::addMessage($out, 'out');
             return response()->json(['ok' => true, 'count' => count($out), 'markets' => $out]);
         } catch (\Throwable $e) {
             return response()->json(['ok' => false, 'error' => $e->getMessage()], 500);
