@@ -565,7 +565,7 @@ class BetController extends Controller
                 'status' => 'ok',
             ]);
         }
-        return redirect()->route('home')->with('status', 'Авторасчёт завершён');
+        
     }
 
     public function checkResultSchedule()

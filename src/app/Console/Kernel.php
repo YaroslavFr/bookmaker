@@ -13,8 +13,9 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // Ежеминутно записывает отметку времени в storage/logs/cron_test.log
-        $schedule->command('rightInfileDate')->everyMinute()->name('cron:test')->withoutOverlapping();
+        $schedule->call(function () {
+            app(\App\Http\Controllers\BetController::class)->autoSettleDue(new \Illuminate\Http\Request());
+        })->everyThirtyMinutes()->name('cron:autoSettleDue')->withoutOverlapping();
     }
 
     /**
