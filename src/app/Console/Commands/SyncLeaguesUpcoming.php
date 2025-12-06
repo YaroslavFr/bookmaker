@@ -34,7 +34,6 @@ class SyncLeaguesUpcoming extends Command
         $updatedTotal = 0;
         foreach ($leagues as $code => $info) {
             $leagueId = (int) ($info['id'] ?? 0);
-            // $this->info('Лига '.$code.' id='.$leagueId);
             if ($leagueId <= 0) { continue; }
             foreach ($years as $yr) {
                 $updatedTotal += $this->syncLeague($base, $headers, $leagueId, (string)$code, (int)$yr, $limit);
@@ -76,7 +75,8 @@ class SyncLeaguesUpcoming extends Command
                 $awayName = data_get($g, 'awayTeam.name') ?? data_get($g, 'away');
                 $startsRaw = data_get($g, 'commence') ?? data_get($g, 'commence_time') ?? data_get($g, 'date') ?? data_get($g, 'start');
                 if (!$gameId || !$homeName || !$awayName || !$startsRaw) { continue; }
-                $starts = Carbon::parse($startsRaw)->utc()->second(0)->micro(0);
+                $startsUtc = Carbon::parse($startsRaw)->utc()->second(0)->micro(0);
+                $starts = in_array($leagueId, [235, 236], true) ? $startsUtc->copy()->addHours(3) : $startsUtc;
                 if ($starts->isPast()) { continue; }
                 if ($starts->gt(Carbon::now()->addDays(10))) { continue; }
                 
