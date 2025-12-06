@@ -28,6 +28,7 @@ class SyncLeaguesUpcoming extends Command
         $yearOpt = $this->option('year');
         $year1 = $yearOpt ? (int) $yearOpt : 2024;
         $year2 = 2025;
+        $years = array_values(array_unique([$year1, $year2]));
 
         $leagues = (array) (config('leagues.leagues') ?? []);
         $updatedTotal = 0;
@@ -35,8 +36,9 @@ class SyncLeaguesUpcoming extends Command
             $leagueId = (int) ($info['id'] ?? 0);
             // $this->info('Лига '.$code.' id='.$leagueId);
             if ($leagueId <= 0) { continue; }
-            $updatedTotal += $this->syncLeague($base, $headers, $leagueId, (string)$code, $year1, $limit);
-            $updatedTotal += $this->syncLeague($base, $headers, $leagueId, (string)$code, $year2, $limit);
+            foreach ($years as $yr) {
+                $updatedTotal += $this->syncLeague($base, $headers, $leagueId, (string)$code, (int)$yr, $limit);
+            }
         }
 
         Cache::put('leagues_sync_last_at', Carbon::now(), 3600);
@@ -66,7 +68,6 @@ class SyncLeaguesUpcoming extends Command
             } elseif (is_array($json)) {
                 $games = $json['games'] ?? $json['Games'] ?? (isset($json[0]) ? $json : []);
             }
-            $this->line('Выборка '.$competition.' '.$year.': игр='.count($games));
 
             $updated = 0;
             foreach ($games as $g) {
@@ -102,7 +103,10 @@ class SyncLeaguesUpcoming extends Command
                 );
                 $updated++;
             }
-            $this->info('Обновлено '.$competition.' '.$year.': '.$updated);
+
+            if($updated > 0)
+                $this->info('Обновлено '.$competition.' '.$year.': '.$updated);
+
             return $updated;
         } catch (\Throwable $e) {
             $this->warn('Лига '.$competition.' ошибка: '.$e->getMessage());

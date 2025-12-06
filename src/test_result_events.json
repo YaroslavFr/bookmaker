@@ -3,19 +3,19 @@
   "count": 3,
   "data": [
     {
-      "id": 111111111111111111111111111111111,
+      "id": 00000000001,
       "date": "2025-11-18T19:45:00+00:00",
       "status": 8,
       "statusName": "Finished",
-      "homeResult": 0,
-      "awayResult": 1,
-      "homeHTResult": 0,
+      "homeResult": 1,
+      "awayResult": 0,
+      "homeHTResult": 1,
       "awayHTResult": 0,
       "homeFTResult": 0,
-      "awayFTResult": 1
+      "awayFTResult": 0
     },
     {
-      "id": 222222222222222222222222,
+      "id": 00000000002,
       "date": "2025-11-18T21:00:00+00:00",
       "status": 8,
       "statusName": "Finished",
@@ -27,7 +27,7 @@
       "awayFTResult": 2
     },
     {
-      "id": 2525252525252525252525252525252525,
+      "id": 00000000003,
       "date": "2025-11-18T22:30:00+00:00",
       "status": 8,
       "statusName": "Finished",

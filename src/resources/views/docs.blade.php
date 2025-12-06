@@ -590,10 +590,12 @@ envoy run assets-build --server=local && envoy run assets --server=beget
                         <li><strong>Через Docker Compose (рекомендуется):</strong> команды исполняются внутри контейнера <code class="doc-kbd">app</code>.</li>
                         <li><strong>Локально (Windows):</strong> выполните из каталога <code class="doc-kbd">src</code> команду <code class="doc-kbd">php vendor/bin/envoy ...</code>.</li>
                     </ul>
-                    <div class="doc-code"><pre><code># Проверить, что Envoy доступен (в контейнере)
+                    <div class="doc-code"><pre><code>
+                        
+# Проверить, что Envoy доступен (в контейнере)
 docker compose exec app vendor/bin/envoy list
 
-# Запустить релиз (в контейнере)
+# Запустить релиз (т.е загрузить на удаленный сервер) (в контейнере)
 docker compose exec app vendor/bin/envoy run release --server=beget --branch=main
 
 # Запустить релиз локально (если PHP установлен и вы в каталоге src)
@@ -624,6 +626,8 @@ docker exec games_app php artisan serve --host=0.0.0.0 --port=8000 --no-reload
 
 # Создание тестовой лиги
 docker compose exec app php artisan events:create-test
+
+# Загрузка предстоящих событий
 </code></pre></div>
                         </div>
                     </section>

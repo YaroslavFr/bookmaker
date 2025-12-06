@@ -369,6 +369,19 @@ class BetController extends Controller
                 $payload = $resp && !$resp->failed() ? ($resp->json('data.0') ?? $resp->json('data') ?? []) : [];
                 if (!empty($payload)) { break; }
             }
+            if (empty($payload)) {
+                try {
+                    $path = base_path('test_result_events.json');
+                    if (is_file($path)) {
+                        $data = json_decode(file_get_contents($path), true);
+                        $rows = data_get($data, 'data', []);
+                        foreach ((array) $rows as $row) {
+                            $rid = (string) (data_get($row, 'id'));
+                            if ($rid === $extId) { $payload = $row; break; }
+                        }
+                    }
+                } catch (\Throwable $e) {}
+            }
             // Проставляем результаты за тайм и матч
             $homeScore = is_numeric(data_get($payload, 'homeResult')) ? (int) data_get($payload, 'homeResult') : null;
             $awayScore = is_numeric(data_get($payload, 'awayResult')) ? (int) data_get($payload, 'awayResult') : null;
@@ -401,6 +414,8 @@ class BetController extends Controller
                 $amount = (float) ($bet->amount_demo ?? 0);
                 $odds = (float) ($bet->placed_odds ?? 0);
                 $win = false; $payout = 0.0; $settled = false;
+                
+
                 if ($market === '' || in_array($sel, ['home','draw','away'], true)) {
                     $win = ($sel === 'home' && $homeScore > $awayScore) || ($sel === 'away' && $awayScore > $homeScore) || ($sel === 'draw' && $homeScore === $awayScore);
                     $settled = true;
@@ -460,11 +475,19 @@ class BetController extends Controller
                             $settled = true;
                         }
                     }
-                } elseif (stripos($market, 'тоталы') !== false) {
+                } elseif (stripos($market, 'тоталы') !== false || preg_match('/^(?:over|under)\s*\(?\s*[0-9]+(?:\.[0-9]+)?\s*\)?(?:\s*goals)?$/i', (string) $bet->selection) || preg_match('/^(?:больше|меньше)\s*[0-9]+(?:\.[0-9]+)?$/iu', (string) $bet->selection) || preg_match('/^(?:тб|тм)\s*[0-9]+(?:\.[0-9]+)?$/iu', (string) $bet->selection)) {
                     $total = $homeScore + $awayScore;
                     
-                    if (preg_match('/^(over|under)\s*([0-9]+(?:\.[0-9]+)?)$/i', $bet->selection, $m)) {
+                    $selNorm = trim(strtolower((string) $bet->selection));
+                    $type = null; $line = null;
+                    if (preg_match('/^(over|under)\s*\(?\s*([0-9]+(?:\.[0-9]+)?)\s*\)?(?:\s*goals)?$/i', (string) $bet->selection, $m)) {
                         $type = strtolower($m[1]); $line = (float) $m[2];
+                    } elseif (preg_match('/^(больше|меньше)\s*([0-9]+(?:\.[0-9]+)?)$/iu', (string) $bet->selection, $m)) {
+                        $type = mb_strtolower($m[1], 'UTF-8') === 'больше' ? 'over' : 'under'; $line = (float) $m[2];
+                    } elseif (preg_match('/^(тб|тм)\s*([0-9]+(?:\.[0-9]+)?)$/iu', (string) $bet->selection, $m)) {
+                        $type = mb_strtolower($m[1], 'UTF-8') === 'тб' ? 'over' : 'under'; $line = (float) $m[2];
+                    }
+                    if ($type !== null && $line !== null) {
                         if (fmod($line, 0.5) === 0.25) {
                             $lower = $line - 0.25; $upper = $line + 0.25;
                             $winLower = $type === 'over' ? ($total > $lower) : ($total < $lower);
@@ -568,6 +591,7 @@ class BetController extends Controller
         
     }
 
+    // Проставляем статус finished и возвращаем id
     public function checkResultSchedule()
     {
         $tz = config('app.timezone');
@@ -575,7 +599,7 @@ class BetController extends Controller
 
         $events = Event::query()
             ->whereNotNull('starts_at')
-            ->whereNot('competition', 'TEST')
+            // ->whereNot('competition', 'TEST')
             ->where('starts_at', '<=', $now)
             ->whereIn('status', ['scheduled','live'])
             ->whereHas('bets', function($q){
@@ -588,7 +612,7 @@ class BetController extends Controller
             ->get();
 
         $externalIds = $events->pluck('external_id')->filter()->values()->all();
-
+\Barryvdh\Debugbar\Facades\Debugbar::addMessage($externalIds, 'externalIds');
         return $externalIds;
     }
 
@@ -728,11 +752,17 @@ class BetController extends Controller
                         $win = ($h === $homeScore && $a === $awayScore);
                         $settled = true;
                     }
-                } elseif (stripos($market, 'Тоталы') !== false) {
+                } elseif (stripos($market, 'Тоталы') !== false || preg_match('/^(?:over|under)\s*\(?\s*[0-9]+(?:\.[0-9]+)?\s*\)?(?:\s*goals)?$/i', (string) $bet->selection) || preg_match('/^(?:больше|меньше)\s*[0-9]+(?:\.[0-9]+)?$/iu', (string) $bet->selection) || preg_match('/^(?:тб|тм)\s*[0-9]+(?:\.[0-9]+)?$/iu', (string) $bet->selection)) {
                     $total = $homeScore + $awayScore;
-                    
-                    if (preg_match('/^(over|under)\s*([0-9]+(?:\.[0-9]+)?)$/i', $bet->selection, $m)) {
+                    $type = null; $line = null;
+                    if (preg_match('/^(over|under)\s*\(?\s*([0-9]+(?:\.[0-9]+)?)\s*\)?(?:\s*goals)?$/i', (string) $bet->selection, $m)) {
                         $type = strtolower($m[1]); $line = (float) $m[2];
+                    } elseif (preg_match('/^(больше|меньше)\s*([0-9]+(?:\.[0-9]+)?)$/iu', (string) $bet->selection, $m)) {
+                        $type = mb_strtolower($m[1], 'UTF-8') === 'больше' ? 'over' : 'under'; $line = (float) $m[2];
+                    } elseif (preg_match('/^(тб|тм)\s*([0-9]+(?:\.[0-9]+)?)$/iu', (string) $bet->selection, $m)) {
+                        $type = mb_strtolower($m[1], 'UTF-8') === 'тб' ? 'over' : 'under'; $line = (float) $m[2];
+                    }
+                    if ($type !== null && $line !== null) {
                         if (fmod($line, 0.5) === 0.25) {
                             $lower = $line - 0.25; $upper = $line + 0.25;
                             $winLower = $type === 'over' ? ($total > $lower) : ($total < $lower);

@@ -8,4 +8,6 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Schedule::command('rightInfileDate')->everyMinute()->name('cron:test');
+Schedule::call(function () {
+    app(\App\Http\Controllers\BetController::class)->autoSettleDue(new \Illuminate\Http\Request());
+})->everyThirtyMinutes()->name('cron:autoSettleDue')->withoutOverlapping();
