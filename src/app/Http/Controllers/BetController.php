@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Log;
 
 class BetController extends Controller
 {
@@ -583,6 +584,7 @@ class BetController extends Controller
                 }
             }
         }
+        Log::info('autoSettleDue cron executed');
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
                 'status' => 'ok',
