@@ -15,10 +15,10 @@ class Kernel extends ConsoleKernel
     {
         $schedule->call(function () {
             app(\App\Http\Controllers\BetController::class)->autoSettleDue(new \Illuminate\Http\Request());
-        })->everyThirtyMinutes()->name('cron:autoSettleDue')->withoutOverlapping();
+        })->everyMinute()->name('cron:autoSettleDue')->withoutOverlapping();
 
         $schedule->command('leagues:sync-upcoming --limit=15')
-            ->everyThirtyMinutes()
+            ->everyMinute()
             ->name('cron:leaguesSync')
             ->withoutOverlapping();
     }

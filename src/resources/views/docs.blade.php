@@ -627,7 +627,8 @@ docker exec games_app php artisan serve --host=0.0.0.0 --port=8000 --no-reload
 # Создание тестовой лиги
 docker compose exec app php artisan events:create-test
 
-# Загрузка предстоящих событий
+# DebugBar
+// \Barryvdh\Debugbar\Facades\Debugbar::addMessage($event->external_id, 'external_id');
 </code></pre></div>
                         </div>
                     </section>

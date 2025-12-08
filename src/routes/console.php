@@ -10,4 +10,9 @@ Artisan::command('inspire', function () {
 
 Schedule::call(function () {
     app(\App\Http\Controllers\BetController::class)->autoSettleDue(new \Illuminate\Http\Request());
-})->everyThirtyMinutes()->name('cron:autoSettleDue')->withoutOverlapping();
+})->everyMinute()->name('cron:autoSettleDue')->withoutOverlapping();
+
+Schedule::command('leagues:sync-upcoming --limit=15 --year='.date('Y'))
+    ->everyMinute()
+    ->name('cron:leaguesSync')
+    ->withoutOverlapping();

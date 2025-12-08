@@ -46,10 +46,7 @@
     git fetch --all --prune
     # Переключаемся на целевую ветку деплоя
     git checkout {{ $branch }}
-    # Обновляем локальную ветку из origin, допускаем только fast-forward, без merge-коммитов
-    git pull --ff-only origin {{ $branch }}
-
-    # Жёстко синхронизируем рабочее дерево со состоянием origin/{{ $branch }}
+    # Жёстко синхронизируем рабочее дерево со состоянием origin/{{ $branch }} (без попытки pull, чтобы избежать конфликтов локальных изменений)
     git reset --hard origin/{{ $branch }}
 
     # Скачиваем локальный composer.phar, если он отсутствует

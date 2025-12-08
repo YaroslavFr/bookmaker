@@ -13,7 +13,7 @@ class OddsController extends Controller
      */
     public function markets(Event $event, Request $request)
     {
-        \Barryvdh\Debugbar\Facades\Debugbar::addMessage($event->external_id, 'external_id');
+        
         if ((string)$event->competition === 'TEST' || str_starts_with((string)$event->external_id, 'test:')) {
             $path2 = base_path('test_extra_odds.json');
             $markets = [];
@@ -27,7 +27,7 @@ class OddsController extends Controller
         if (!$event->external_id) {
             return response()->json(['ok' => false, 'error' => 'Missing external_id for event'], 400);
         }
-        \Barryvdh\Debugbar\Facades\Debugbar::addMessage($event->external_id, 'external_id');
+        
         return $this->marketsByGame($request, $event->external_id, null);
     }
 
@@ -115,7 +115,6 @@ class OddsController extends Controller
                 }
                 if (count($out) >= 10) break;
             }
-            \Barryvdh\Debugbar\Facades\Debugbar::addMessage($out, 'out');
             return response()->json(['ok' => true, 'count' => count($out), 'markets' => $out]);
         } catch (\Throwable $e) {
             return response()->json(['ok' => false, 'error' => $e->getMessage()], 500);

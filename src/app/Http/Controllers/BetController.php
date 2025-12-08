@@ -612,7 +612,7 @@ class BetController extends Controller
             ->get();
 
         $externalIds = $events->pluck('external_id')->filter()->values()->all();
-\Barryvdh\Debugbar\Facades\Debugbar::addMessage($externalIds, 'externalIds');
+
         return $externalIds;
     }
 
